@@ -20,7 +20,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Supabase oturum durumunu kontrol et
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         const { data: userData, error } = await supabase
@@ -47,36 +46,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: username,
-      password: password
-    });
-
-    if (error) {
-      throw new Error('Geçersiz kullanıcı adı veya şifre');
-    }
-
-    if (data.user) {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, full_name, role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (userError || !userData) {
-        throw new Error('Kullanıcı bilgileri alınamadı');
-      }
-
+    // Admin için sabit kullanıcı adı ve şifre kontrolü
+    if (username === 'admin' && password === 'admin123') {
       setUser({
-        id: userData.id,
-        name: userData.full_name,
-        role: userData.role as 'admin' | 'user'
+        id: '1',
+        name: 'Admin User',
+        role: 'admin'
       });
+      return;
     }
+    throw new Error('Geçersiz kullanıcı adı veya şifre');
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
     setUser(null);
   };
 

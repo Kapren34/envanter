@@ -6,7 +6,7 @@ import { Package } from 'lucide-react';
 const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +21,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      await login(cleanEmail, password);
+      await login(username, password);
       navigate('/');
     } catch (err) {
       setError('Geçersiz kullanıcı adı veya şifre');
@@ -51,22 +50,22 @@ const Login = () => {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="username"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Email
+                  Kullanıcı Adı
                 </label>
                 <div className="mt-1">
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="ornek@email.com"
+                    placeholder="Kullanıcı adınızı girin"
                   />
                 </div>
               </div>
