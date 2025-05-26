@@ -77,18 +77,15 @@ const Ayarlar = () => {
   const handleAddUser = async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
-        .insert([{
-          username: newUser.username,
-          full_name: newUser.full_name,
-          role: newUser.role
-        }])
-        .select()
-        .single();
+        .rpc('create_new_user', {
+          new_username: newUser.username,
+          new_full_name: newUser.full_name,
+          new_role: newUser.role
+        });
 
       if (error) throw error;
 
-      setUsers([data, ...users]);
+      await loadUsers(); // Reload users list
       setNewUser({ username: '', full_name: '', role: 'user' });
       alert('Kullanıcı başarıyla eklendi.');
     } catch (error) {
