@@ -55,29 +55,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      const { data, error } = await supabase
-        .rpc('authenticate_user', {
-          p_username: username,
-          p_password: password
-        });
+      // First get the email for the username
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('username', username)
+        .single();
+
+      if (userError || !userData?.email) {
+        throw new Error('Geçersiz kullanıcı adı veya şifre');
+      }
+
+      // Sign in with email and password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: password
+      });
 
       if (error) throw error;
 
-      if (data) {
-        const { data: userData, error: userError } = await supabase
+      if (data.user) {
+        const { data: userDetails, error: userDetailsError } = await supabase
           .from('users')
           .select('id, full_name, role, settings')
-          .eq('username', username)
+          .eq('id', data.user.id)
           .single();
 
-        if (userError) throw userError;
+        if (userDetailsError) throw userDetailsError;
 
-        if (userData) {
+        if (userDetails) {
           setUser({
-            id: userData.id,
-            name: userData.full_name,
-            role: userData.role as 'admin' | 'user',
-            settings: userData.settings
+            id: userDetails.id,
+            name: userDetails.full_name,
+            role: userDetails.role as 'admin' | 'user',
+            settings: userDetails.settings
           });
           return;
         }
@@ -90,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
