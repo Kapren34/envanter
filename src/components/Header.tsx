@@ -10,6 +10,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
     <header className="bg-white shadow-md h-16 flex items-center justify-between px-6 md:px-8">
       <div className="flex items-center">
         <button 
+          id="sidebar-toggle"
           onClick={toggleSidebar} 
           className="p-1 mr-4 -ml-1 rounded-md md:hidden focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
@@ -35,5 +36,3 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
     </header>
   );
 };
-
-export default Header;
