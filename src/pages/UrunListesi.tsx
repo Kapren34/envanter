@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
+import { exportToExcel } from '../utils/excelUtils';
 
 const UrunListesi = () => {
   const { urunler, kategoriler, removeUrun } = useEnvanter();
@@ -291,7 +292,22 @@ const UrunListesi = () => {
       
       {/* Dışa Aktar Butonu */}
       <div className="flex justify-end">
-        <button className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150">
+        <button 
+          onClick={() => exportToExcel(
+            sortedUrunler.map(urun => ({
+              'Ürün Adı': urun.ad,
+              'Marka': urun.marka,
+              'Model': urun.model,
+              'Kategori': urun.kategori,
+              'Durum': urun.durum,
+              'Lokasyon': urun.lokasyon,
+              'Seri No': urun.seriNo,
+              'Barkod': urun.barkod,
+            })),
+            'Urunler'
+          )}
+          className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150"
+        >
           <Download className="h-5 w-5 mr-2" />
           Excel'e Aktar
         </button>
@@ -306,17 +322,15 @@ const UrunListesi = () => {
               <BarkodGenerator
                 barkod={urunler.find(u => u.id === selectedUrun)?.barkod || ''}
                 urunAdi={urunler.find(u => u.id === selectedUrun)?.ad || ''}
+                onPrint={() => setSelectedUrun(null)}
               />
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-end">
               <button
                 onClick={() => setSelectedUrun(null)}
                 className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
               >
                 Kapat
-              </button>
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
-                Yazdır
               </button>
             </div>
           </div>
