@@ -12,6 +12,7 @@ const UrunEkle = () => {
     ad: '',
     marka: '',
     model: '',
+    kategori: '',
     durum: 'Depoda',
     lokasyon: 'Merkez',
     seriNo: '',
@@ -67,6 +68,16 @@ const UrunEkle = () => {
     'Grand Saphire'
   ];
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
+
+  // Kategoriler
+  const kategoriler = [
+    'Ses Malzemeleri',
+    'Işık Malzemeleri',
+    'Görüntü Malzemeleri',
+    'Kablo',
+    'Case',
+    'Depo Ürünleri'
+  ];
 
   return (
     <div className="space-y-6">
@@ -137,6 +148,30 @@ const UrunEkle = () => {
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="kategori"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Kategori*
+              </label>
+              <select
+                id="kategori"
+                name="kategori"
+                required
+                value={formData.kategori}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Kategori Seçin</option>
+                {kategoriler.map((kategori) => (
+                  <option key={kategori} value={kategori}>
+                    {kategori}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
