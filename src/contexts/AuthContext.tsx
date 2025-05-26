@@ -55,23 +55,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      // Authenticate using RPC function
-      const { data: authResult, error: authError } = await supabase
+      // Call the authenticate_user function
+      const { data, error } = await supabase
         .rpc('authenticate_user', {
           p_username: username,
           p_password: password
         });
 
-      if (authError) {
-        console.error('Authentication error:', authError);
+      if (error) {
+        console.error('Authentication error:', error);
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      if (!authResult || authResult.length === 0) {
+      if (!data || data.length === 0) {
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      const { user_id, role } = authResult[0];
+      const { user_id, role } = data[0];
 
       // Get user details
       const { data: userData, error: userError } = await supabase
@@ -85,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
+      // Set user state
       setUser({
         id: userData.id,
         name: userData.full_name,
@@ -94,13 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Geçersiz kullanıcı adı veya şifre');
+      throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
