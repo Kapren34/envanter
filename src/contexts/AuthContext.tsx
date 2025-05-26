@@ -5,6 +5,12 @@ interface User {
   id: string;
   name: string;
   role: 'admin' | 'user';
+  settings?: {
+    company_name: string;
+    low_stock_limit: number;
+    email_notifications: boolean;
+    auto_backup: boolean;
+  };
 }
 
 interface AuthContextType {
@@ -12,6 +18,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session) {
         const { data: userData, error } = await supabase
           .from('users')
-          .select('id, full_name, role')
+          .select('id, full_name, role, settings')
           .eq('id', session.user.id)
           .single();
 
@@ -32,7 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser({
             id: userData.id,
             name: userData.full_name,
-            role: userData.role as 'admin' | 'user'
+            role: userData.role as 'admin' | 'user',
+            settings: userData.settings
           });
         }
       } else {
@@ -46,12 +54,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    // Admin için sabit kullanıcı adı ve şifre kontrolü
     if (username === 'admin' && password === 'admin123') {
       setUser({
         id: '1',
         name: 'Admin User',
-        role: 'admin'
+        role: 'admin',
+        settings: {
+          company_name: 'POWERSOUND',
+          low_stock_limit: 5,
+          email_notifications: false,
+          auto_backup: true
+        }
       });
       return;
     }
@@ -63,7 +76,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      isAuthenticated: !!user,
+      isAdmin: user?.role === 'admin'
+    }}>
       {children}
     </AuthContext.Provider>
   );
