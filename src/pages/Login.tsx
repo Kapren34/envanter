@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Package } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,44 +20,9 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
-    // Trim whitespace from email and ensure lowercase
-    const cleanEmail = email.trim().toLowerCase();
-    
-    if (!cleanEmail || !password) {
-      setError('Email ve şifre gereklidir');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      // First authenticate with Supabase Auth using cleaned email
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: password,
-      });
-
-      if (authError) {
-        if (authError.message === 'Invalid login credentials') {
-          throw new Error('Email veya şifre hatalı');
-        }
-        throw new Error(authError.message);
-      }
-
-      if (!authData.user) throw new Error('Kullanıcı bulunamadı');
-
-      // After successful authentication, get the user data from our users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, role, username, full_name')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (userError || !userData) {
-        throw new Error('Kullanıcı bilgileri alınamadı');
-      }
-
-      // If we get here, authentication was successful and we have the user data
-      await login(userData);
+      const cleanEmail = email.trim().toLowerCase();
+      await login(cleanEmail, password);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Giriş yapılamadı');
