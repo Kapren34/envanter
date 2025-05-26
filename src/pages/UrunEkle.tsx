@@ -6,7 +6,7 @@ import { generateBarkod } from '../utils/barkodUtils';
 
 const UrunEkle = () => {
   const navigate = useNavigate();
-  const { addUrun } = useEnvanter();
+  const { addUrun, kategoriler } = useEnvanter();
 
   const [formData, setFormData] = useState({
     ad: '',
@@ -68,16 +68,6 @@ const UrunEkle = () => {
     'Grand Saphire'
   ];
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
-
-  // Kategoriler
-  const kategoriler = [
-    'Ses Malzemeleri',
-    'Işık Malzemeleri',
-    'Görüntü Malzemeleri',
-    'Kablo',
-    'Case',
-    'Depo Ürünleri'
-  ];
 
   return (
     <div className="space-y-6">
@@ -167,8 +157,8 @@ const UrunEkle = () => {
               >
                 <option value="">Kategori Seçin</option>
                 {kategoriler.map((kategori) => (
-                  <option key={kategori} value={kategori}>
-                    {kategori}
+                  <option key={kategori.id} value={kategori.id}>
+                    {kategori.ad}
                   </option>
                 ))}
               </select>

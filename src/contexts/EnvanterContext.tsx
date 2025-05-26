@@ -6,7 +6,7 @@ interface Urun {
   ad: string;
   marka: string;
   model: string;
-  kategori: string;
+  kategori: string; // This is the category UUID
   durum: string;
   lokasyon: string;
   seriNo: string;
@@ -90,7 +90,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ad: p.name,
           marka: p.brand,
           model: p.model,
-          kategori: p.category_id,
+          kategori: p.category_id, // This is now correctly a UUID
           durum: p.status,
           lokasyon: p.location_id,
           seriNo: p.serial_number,
@@ -134,7 +134,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           name: urun.ad,
           brand: urun.marka,
           model: urun.model,
-          category_id: urun.kategori,
+          category_id: urun.kategori, // This is now correctly a UUID
           status: urun.durum,
           location_id: urun.lokasyon,
           serial_number: urun.seriNo,
