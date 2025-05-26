@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 // Tip tanımlamaları
 interface Urun {
@@ -36,226 +37,235 @@ interface EnvanterContextType {
   urunler: Urun[];
   hareketler: Hareket[];
   kategoriler: Kategori[];
-  addUrun: (urun: Urun) => void;
-  updateUrun: (id: string, updatedUrun: Partial<Urun>) => void;
-  removeUrun: (id: string) => void;
-  addHareket: (hareket: Hareket) => void;
-  removeHareket: (id: string) => void;
-  addKategori: (kategori: Kategori) => void;
-  removeKategori: (id: string) => void;
+  addUrun: (urun: Urun) => Promise<void>;
+  updateUrun: (id: string, updatedUrun: Partial<Urun>) => Promise<void>;
+  removeUrun: (id: string) => Promise<void>;
+  addHareket: (hareket: Hareket) => Promise<void>;
+  removeHareket: (id: string) => Promise<void>;
+  addKategori: (kategori: Kategori) => Promise<void>;
+  removeKategori: (id: string) => Promise<void>;
 }
 
-// Örnek veriler
-const ornekKategoriler: Kategori[] = [
-  { id: '1', ad: 'Ses Sistemleri' },
-  { id: '2', ad: 'Işık Sistemleri' },
-  { id: '3', ad: 'Görüntü Sistemleri' },
-  { id: '4', ad: 'Kablolar' },
-  { id: '5', ad: 'Mikserler' },
-  { id: '6', ad: 'Mikrofonlar' },
-  { id: '7', ad: 'Projektörler' },
-];
-
-const ornekUrunler: Urun[] = [
-  {
-    id: '1',
-    ad: 'Profesyonel Mikrofon',
-    marka: 'Shure',
-    model: 'SM58',
-    kategori: 'Mikrofonlar',
-    durum: 'Depoda',
-    lokasyon: 'Merkez',
-    seriNo: 'SHR-1234567',
-    aciklama: 'Profesyonel sahne mikrofonu',
-    barkod: 'MIKSHUSM58-001',
-    eklemeTarihi: '15.01.2024',
-  },
-  {
-    id: '2',
-    ad: 'LED Par Işık',
-    marka: 'Stairville',
-    model: 'PAR64',
-    kategori: 'Işık Sistemleri',
-    durum: 'Depoda',
-    lokasyon: 'Merkez',
-    seriNo: 'STV-98765',
-    aciklama: 'RGB LED sahne ışığı',
-    barkod: 'ISISTVPAR-002',
-    eklemeTarihi: '20.11.2023',
-  },
-  {
-    id: '3',
-    ad: 'Aktif Hoparlör',
-    marka: 'JBL',
-    model: 'EON615',
-    kategori: 'Ses Sistemleri',
-    durum: 'Dışarıda',
-    lokasyon: 'Otel A',
-    seriNo: 'JBL-7654321',
-    aciklama: '1000W 15" aktif hoparlör',
-    barkod: 'SESJBLEON-003',
-    eklemeTarihi: '05.09.2023',
-  },
-  {
-    id: '4',
-    ad: 'HDMI Projeksiyon Cihazı',
-    marka: 'Epson',
-    model: 'EB-X41',
-    kategori: 'Görüntü Sistemleri',
-    durum: 'Kiralandı',
-    lokasyon: 'Otel B',
-    seriNo: 'EPS-112233',
-    aciklama: '3600 lümen XGA projeksiyon',
-    barkod: 'GOREPSON-004',
-    eklemeTarihi: '10.12.2023',
-  },
-  {
-    id: '5',
-    ad: 'Dijital Mikser',
-    marka: 'Behringer',
-    model: 'X32',
-    kategori: 'Mikserler',
-    durum: 'Serviste',
-    lokasyon: 'Merkez',
-    seriNo: 'BHR-445566',
-    aciklama: '32 kanallı dijital mikser',
-    barkod: 'MIKBEHX32-005',
-    eklemeTarihi: '22.08.2023',
-  },
-  {
-    id: '6',
-    ad: 'DMX Kontrol Ünitesi',
-    marka: 'American DJ',
-    model: 'DMX Operator',
-    kategori: 'Işık Sistemleri',
-    durum: 'Depoda',
-    lokasyon: 'Merkez',
-    seriNo: 'ADJ-998877',
-    aciklama: 'Profesyonel DMX ışık kontrol ünitesi',
-    barkod: 'ISIADJDMX-006',
-    eklemeTarihi: '05.02.2024',
-  },
-];
-
-const ornekHareketler: Hareket[] = [
-  {
-    id: '1',
-    urunId: '3',
-    urunAdi: 'Aktif Hoparlör',
-    tip: 'Çıkış',
-    miktar: 2,
-    tarih: '01.03.2024',
-    aciklama: 'Otel A etkinliği için çıkış yapıldı',
-    lokasyon: 'Otel A',
-    kullanici: 'Admin',
-  },
-  {
-    id: '2',
-    urunId: '4',
-    urunAdi: 'HDMI Projeksiyon Cihazı',
-    tip: 'Çıkış',
-    miktar: 1,
-    tarih: '05.03.2024',
-    aciklama: 'Otel B konferans salonu için kiralama',
-    lokasyon: 'Otel B',
-    kullanici: 'Admin',
-  },
-  {
-    id: '3',
-    urunId: '5',
-    urunAdi: 'Dijital Mikser',
-    tip: 'Çıkış',
-    miktar: 1,
-    tarih: '10.03.2024',
-    aciklama: 'Arıza tespiti için servise gönderildi',
-    lokasyon: 'Servis',
-    kullanici: 'Admin',
-  },
-  {
-    id: '4',
-    urunId: '1',
-    urunAdi: 'Profesyonel Mikrofon',
-    tip: 'Giriş',
-    miktar: 3,
-    tarih: '15.03.2024',
-    aciklama: 'Yeni stok alımı',
-    lokasyon: 'Merkez',
-    kullanici: 'Admin',
-  },
-  {
-    id: '5',
-    urunId: '2',
-    urunAdi: 'LED Par Işık',
-    tip: 'Giriş',
-    miktar: 5,
-    tarih: '20.03.2024',
-    aciklama: 'Yeni stok alımı',
-    lokasyon: 'Merkez',
-    kullanici: 'Admin',
-  },
-];
-
-// Context oluşturma
 const EnvanterContext = createContext<EnvanterContextType | undefined>(undefined);
 
-// Provider bileşeni
 export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [urunler, setUrunler] = useState<Urun[]>(ornekUrunler);
-  const [hareketler, setHareketler] = useState<Hareket[]>(ornekHareketler);
-  const [kategoriler, setKategoriler] = useState<Kategori[]>(ornekKategoriler);
-  
-  // localStorage'dan verileri yükle
+  const [urunler, setUrunler] = useState<Urun[]>([]);
+  const [hareketler, setHareketler] = useState<Hareket[]>([]);
+  const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
+
+  // Verileri Supabase'den yükle
   useEffect(() => {
-    const storedUrunler = localStorage.getItem('urunler');
-    const storedHareketler = localStorage.getItem('hareketler');
-    const storedKategoriler = localStorage.getItem('kategoriler');
-    
-    if (storedUrunler) setUrunler(JSON.parse(storedUrunler));
-    if (storedHareketler) setHareketler(JSON.parse(storedHareketler));
-    if (storedKategoriler) setKategoriler(JSON.parse(storedKategoriler));
+    loadData();
   }, []);
-  
-  // Verileri localStorage'a kaydet
-  useEffect(() => {
-    localStorage.setItem('urunler', JSON.stringify(urunler));
-    localStorage.setItem('hareketler', JSON.stringify(hareketler));
-    localStorage.setItem('kategoriler', JSON.stringify(kategoriler));
-  }, [urunler, hareketler, kategoriler]);
-  
+
+  const loadData = async () => {
+    try {
+      // Ürünleri yükle
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('*');
+      
+      if (productsError) throw productsError;
+
+      // Kategorileri yükle
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*');
+      
+      if (categoriesError) throw categoriesError;
+
+      // Hareketleri yükle
+      const { data: movements, error: movementsError } = await supabase
+        .from('movements')
+        .select('*');
+      
+      if (movementsError) throw movementsError;
+
+      // Verileri state'e kaydet
+      setUrunler(products.map(p => ({
+        id: p.id,
+        ad: p.name,
+        marka: p.brand,
+        model: p.model,
+        kategori: p.category_id,
+        durum: p.status,
+        lokasyon: p.location_id,
+        seriNo: p.serial_number,
+        aciklama: p.description,
+        barkod: p.barcode,
+        eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
+      })));
+
+      setKategoriler(categories.map(c => ({
+        id: c.id,
+        ad: c.name
+      })));
+
+      setHareketler(movements.map(m => ({
+        id: m.id,
+        urunId: m.product_id,
+        urunAdi: urunler.find(u => u.id === m.product_id)?.ad || '',
+        tip: m.type,
+        miktar: m.quantity,
+        tarih: new Date(m.created_at).toLocaleDateString('tr-TR'),
+        aciklama: m.description,
+        lokasyon: m.location_id,
+        kullanici: m.user_id
+      })));
+
+    } catch (error) {
+      console.error('Veri yükleme hatası:', error);
+    }
+  };
+
   // Ürün işlemleri
-  const addUrun = (urun: Urun) => {
-    setUrunler([...urunler, urun]);
+  const addUrun = async (urun: Urun) => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{
+          name: urun.ad,
+          brand: urun.marka,
+          model: urun.model,
+          category_id: urun.kategori,
+          status: urun.durum,
+          location_id: urun.lokasyon,
+          serial_number: urun.seriNo,
+          description: urun.aciklama,
+          barcode: urun.barkod
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setUrunler([...urunler, { ...urun, id: data.id }]);
+    } catch (error) {
+      console.error('Ürün ekleme hatası:', error);
+      throw error;
+    }
   };
-  
-  const updateUrun = (id: string, updatedUrun: Partial<Urun>) => {
-    setUrunler(
-      urunler.map((urun) => (urun.id === id ? { ...urun, ...updatedUrun } : urun))
-    );
+
+  const updateUrun = async (id: string, updatedUrun: Partial<Urun>) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: updatedUrun.ad,
+          brand: updatedUrun.marka,
+          model: updatedUrun.model,
+          category_id: updatedUrun.kategori,
+          status: updatedUrun.durum,
+          location_id: updatedUrun.lokasyon,
+          serial_number: updatedUrun.seriNo,
+          description: updatedUrun.aciklama
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setUrunler(urunler.map((urun) => 
+        urun.id === id ? { ...urun, ...updatedUrun } : urun
+      ));
+    } catch (error) {
+      console.error('Ürün güncelleme hatası:', error);
+      throw error;
+    }
   };
-  
-  const removeUrun = (id: string) => {
-    setUrunler(urunler.filter((urun) => urun.id !== id));
-    setHareketler(hareketler.filter((hareket) => hareket.urunId !== id));
+
+  const removeUrun = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setUrunler(urunler.filter((urun) => urun.id !== id));
+      setHareketler(hareketler.filter((hareket) => hareket.urunId !== id));
+    } catch (error) {
+      console.error('Ürün silme hatası:', error);
+      throw error;
+    }
   };
-  
+
   // Hareket işlemleri
-  const addHareket = (hareket: Hareket) => {
-    setHareketler([...hareketler, hareket]);
+  const addHareket = async (hareket: Hareket) => {
+    try {
+      const { data, error } = await supabase
+        .from('movements')
+        .insert([{
+          product_id: hareket.urunId,
+          type: hareket.tip,
+          quantity: hareket.miktar,
+          description: hareket.aciklama,
+          location_id: hareket.lokasyon
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setHareketler([...hareketler, { ...hareket, id: data.id }]);
+    } catch (error) {
+      console.error('Hareket ekleme hatası:', error);
+      throw error;
+    }
   };
-  
-  const removeHareket = (id: string) => {
-    setHareketler(hareketler.filter((hareket) => hareket.id !== id));
+
+  const removeHareket = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('movements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setHareketler(hareketler.filter((hareket) => hareket.id !== id));
+    } catch (error) {
+      console.error('Hareket silme hatası:', error);
+      throw error;
+    }
   };
-  
+
   // Kategori işlemleri
-  const addKategori = (kategori: Kategori) => {
-    setKategoriler([...kategoriler, kategori]);
+  const addKategori = async (kategori: Kategori) => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{
+          name: kategori.ad
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setKategoriler([...kategoriler, { ...kategori, id: data.id }]);
+    } catch (error) {
+      console.error('Kategori ekleme hatası:', error);
+      throw error;
+    }
   };
-  
-  const removeKategori = (id: string) => {
-    setKategoriler(kategoriler.filter((kategori) => kategori.id !== id));
+
+  const removeKategori = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setKategoriler(kategoriler.filter((kategori) => kategori.id !== id));
+    } catch (error) {
+      console.error('Kategori silme hatası:', error);
+      throw error;
+    }
   };
-  
+
   const value = {
     urunler,
     hareketler,
@@ -276,7 +286,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// Context'i kullanmak için hook
 export const useEnvanter = () => {
   const context = useContext(EnvanterContext);
   if (context === undefined) {
