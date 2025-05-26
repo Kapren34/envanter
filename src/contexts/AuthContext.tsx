@@ -3,13 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface User {
   id: string;
   name: string;
-  email: string;
   role: 'admin' | 'user';
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -20,26 +19,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check for saved user data on load
+    // Kayıtlı kullanıcı bilgilerini kontrol et
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Simulated authentication
-    if (email === 'admin@example.com' && password === 'admin123') {
+  const login = async (username: string, password: string) => {
+    // Kullanıcı doğrulama
+    if (username === 'admin' && password === 'admin123') {
       const user = {
         id: '1',
-        name: 'Admin Kullanıcı',
-        email: 'admin@example.com',
+        name: 'Admin',
         role: 'admin' as const,
       };
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
     } else {
-      throw new Error('Geçersiz e-posta veya şifre');
+      throw new Error('Geçersiz kullanıcı adı veya şifre');
     }
   };
 

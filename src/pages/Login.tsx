@@ -6,7 +6,7 @@ import { Package } from 'lucide-react';
 const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,10 +21,10 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       navigate('/');
     } catch (err) {
-      setError('Geçersiz e-posta veya şifre');
+      setError('Geçersiz kullanıcı adı veya şifre');
     } finally {
       setIsLoading(false);
     }
@@ -50,20 +50,20 @@ const Login = () => {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="username"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  E-posta
+                  Kullanıcı Adı
                 </label>
                 <div className="mt-1">
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
@@ -119,7 +119,7 @@ const Login = () => {
                 </div>
               </div>
               <div className="mt-6 text-center text-sm">
-                <p className="text-gray-600">E-posta: admin@example.com</p>
+                <p className="text-gray-600">Kullanıcı Adı: admin</p>
                 <p className="text-gray-600">Şifre: admin123</p>
               </div>
             </div>
