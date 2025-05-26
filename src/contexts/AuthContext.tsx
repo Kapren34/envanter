@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string) => {
     try {
       // First authenticate using our custom RPC function
-      const { data: isAuthenticated, error: authError } = await supabase
+      const { data: authData, error: authError } = await supabase
         .rpc('authenticate_user', {
           p_username: username,
           p_password: password
@@ -64,15 +64,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) throw authError;
 
-      if (!isAuthenticated) {
+      if (!authData || !authData.user_id) {
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      // If authenticated, get user details
+      // If authenticated, get user details using the user_id from the RPC response
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, settings')
-        .eq('username', username)
+        .eq('id', authData.user_id)
         .single();
 
       if (userError) throw userError;
@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Geçersiz kullanıcı adı veya şifre');
+      throw error instanceof Error ? error : new Error('Geçersiz kullanıcı adı veya şifre');
     }
   };
 
