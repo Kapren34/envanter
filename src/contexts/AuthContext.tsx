@@ -55,44 +55,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      // First get the email for the username
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('username', username)
-        .single();
+      // Try to authenticate using RPC function
+      const { data: isAuthenticated, error: rpcError } = await supabase
+        .rpc('authenticate_user', {
+          p_username: username,
+          p_password: password
+        });
 
-      if (userError || !userData?.email) {
-        throw new Error('Geçersiz kullanıcı adı veya şifre');
-      }
+      if (rpcError) throw rpcError;
 
-      // Sign in with email and password
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: userData.email,
-        password: password
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        const { data: userDetails, error: userDetailsError } = await supabase
+      if (isAuthenticated) {
+        // Get user details
+        const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, full_name, role, settings')
-          .eq('id', data.user.id)
+          .eq('username', username)
           .single();
 
-        if (userDetailsError) throw userDetailsError;
+        if (userError) throw userError;
 
-        if (userDetails) {
+        if (userData) {
           setUser({
-            id: userDetails.id,
-            name: userDetails.full_name,
-            role: userDetails.role as 'admin' | 'user',
-            settings: userDetails.settings
+            id: userData.id,
+            name: userData.full_name,
+            role: userData.role as 'admin' | 'user',
+            settings: userData.settings
           });
           return;
         }
       }
+      
       throw new Error('Geçersiz kullanıcı adı veya şifre');
     } catch (error) {
       console.error('Giriş hatası:', error);
