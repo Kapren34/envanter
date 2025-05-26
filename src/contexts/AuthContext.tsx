@@ -24,49 +24,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-
-  const login = async (username: string, password: string) => {
-    try {
-      // Call the authenticate_user function
-      const { data: authData, error: authError } = await supabase
-        .rpc('authenticate_user', {
-          p_username: username,
-          p_password: password
-        });
-
-      if (authError) {
-        console.error('Authentication error:', authError);
-        throw new Error('Kimlik doğrulama başarısız');
-      }
-
-      if (!authData || authData.length === 0) {
-        throw new Error('Geçersiz kullanıcı adı veya şifre');
-      }
-
-      // Get user details
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, full_name, role, settings')
-        .eq('id', authData[0].user_id)
-        .single();
-
-      if (userError) {
-        console.error('User data error:', userError);
-        throw new Error('Kullanıcı bilgileri alınamadı');
-      }
-
-      setUser({
-        id: userData.id,
-        name: userData.full_name,
-        role: userData.role as 'admin' | 'user',
-        settings: userData.settings
-      });
-
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+  const [user, setUser] = useState<User | null>({
+    id: '1',
+    name: 'Admin User',
+    role: 'admin',
+    settings: {
+      company_name: 'POWERSOUND',
+      low_stock_limit: 5,
+      email_notifications: false,
+      auto_backup: true
     }
+  });
+
+  const login = async () => {
+    // Auto-login is handled by default user state
   };
 
   const logout = async () => {
@@ -78,8 +49,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       login,
       logout,
-      isAuthenticated: !!user,
-      isAdmin: user?.role === 'admin'
+      isAuthenticated: true, // Always authenticated
+      isAdmin: true // Always admin
     }}>
       {children}
     </AuthContext.Provider>
