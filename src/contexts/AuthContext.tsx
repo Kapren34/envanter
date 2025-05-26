@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      if (!authData || authData.length === 0) {
+      if (!authData || !Array.isArray(authData) || authData.length === 0) {
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
@@ -77,12 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Kullanıcı kimliği alınamadı');
       }
 
-      // Get user details with explicit id equality check
+      // Get user details with explicit type casting and error handling
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, settings')
-        .eq('id', user_id)
-        .maybeSingle();
+        .eq('id', user_id.toString())
+        .single();
 
       if (userError) {
         console.error('User data error:', userError);
@@ -90,7 +90,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!userData) {
-        throw new Error('Kullanıcı bulunamadı');
+        console.error('User not found with ID:', user_id);
+        throw new Error('Kullanıcı bilgileri bulunamadı');
       }
 
       // Set user state
@@ -109,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
