@@ -22,35 +22,32 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Query the users table directly to check credentials
-      const { data: users, error: queryError } = await supabase
+      // First authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: password,
+      });
+
+      if (authError) throw new Error('Geçersiz email veya şifre');
+
+      if (!authData.user) throw new Error('Kullanıcı bulunamadı');
+
+      // After successful authentication, get the user data from our users table
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, email, role, username, full_name')
-        .eq('email', email.toLowerCase())
+        .eq('id', authData.user.id)
         .single();
 
-      if (queryError || !users) {
-        throw new Error('Geçersiz email veya şifre');
+      if (userError || !userData) {
+        throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
-      // Note: In a real implementation, you would hash the password and compare with password_hash
-      // This is just a temporary solution - you should implement proper password hashing
-      const { data: passwordCheck, error: passwordError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .eq('password_hash', password)
-        .single();
-
-      if (passwordError || !passwordCheck) {
-        throw new Error('Geçersiz email veya şifre');
-      }
-
-      // If we get here, the credentials are valid
-      await login(users);
+      // If we get here, authentication was successful and we have the user data
+      await login(userData);
       navigate('/');
     } catch (err) {
-      setError('Geçersiz email veya şifre');
+      setError(err instanceof Error ? err.message : 'Giriş yapılamadı');
     } finally {
       setIsLoading(false);
     }
