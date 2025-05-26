@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Anasayfa from './pages/Anasayfa';
 import UrunListesi from './pages/UrunListesi';
 import UrunEkle from './pages/UrunEkle';
@@ -9,27 +10,39 @@ import Hareketler from './pages/Hareketler';
 import HareketEkle from './pages/HareketEkle';
 import Raporlar from './pages/Raporlar';
 import Ayarlar from './pages/Ayarlar';
+import PrivateRoute from './components/PrivateRoute';
 import { EnvanterProvider } from './contexts/EnvanterContext';
+import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
 
 function App() {
   return (
-    <EnvanterProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Anasayfa />} />
-            <Route path="urunler" element={<UrunListesi />} />
-            <Route path="urunler/ekle" element={<UrunEkle />} />
-            <Route path="urunler/:id" element={<UrunDetay />} />
-            <Route path="hareketler" element={<Hareketler />} />
-            <Route path="hareketler/ekle" element={<HareketEkle />} />
-            <Route path="raporlar" element={<Raporlar />} />
-            <Route path="ayarlar" element={<Ayarlar />} />
-          </Route>
-        </Routes>
-      </Router>
-    </EnvanterProvider>
+    <AuthProvider>
+      <EnvanterProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Layout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<Anasayfa />} />
+              <Route path="urunler" element={<UrunListesi />} />
+              <Route path="urunler/ekle" element={<UrunEkle />} />
+              <Route path="urunler/:id" element={<UrunDetay />} />
+              <Route path="hareketler" element={<Hareketler />} />
+              <Route path="hareketler/ekle" element={<HareketEkle />} />
+              <Route path="raporlar" element={<Raporlar />} />
+              <Route path="ayarlar" element={<Ayarlar />} />
+            </Route>
+          </Routes>
+        </Router>
+      </EnvanterProvider>
+    </AuthProvider>
   );
 }
 
