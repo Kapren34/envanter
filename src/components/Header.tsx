@@ -36,3 +36,5 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
     </header>
   );
 };
+
+export default Header
