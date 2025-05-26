@@ -10,6 +10,7 @@ import Hareketler from './pages/Hareketler';
 import HareketEkle from './pages/HareketEkle';
 import Raporlar from './pages/Raporlar';
 import Ayarlar from './pages/Ayarlar';
+import Depo from './pages/Depo';
 import PrivateRoute from './components/PrivateRoute';
 import { EnvanterProvider } from './contexts/EnvanterContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -31,6 +32,7 @@ function App() {
               }
             >
               <Route index element={<Anasayfa />} />
+              <Route path="depo" element={<Depo />} />
               <Route path="urunler" element={<UrunListesi />} />
               <Route path="urunler/ekle" element={<UrunEkle />} />
               <Route path="urunler/:id" element={<UrunDetay />} />
