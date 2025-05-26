@@ -44,6 +44,7 @@ interface EnvanterContextType {
   removeHareket: (id: string) => Promise<void>;
   addKategori: (kategori: Kategori) => Promise<void>;
   removeKategori: (id: string) => Promise<void>;
+  isAdmin: boolean;
 }
 
 const EnvanterContext = createContext<EnvanterContextType | undefined>(undefined);
@@ -52,6 +53,27 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [urunler, setUrunler] = useState<Urun[]>([]);
   const [hareketler, setHareketler] = useState<Hareket[]>([]);
   const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (!error && data) {
+          setIsAdmin(data.role === 'admin');
+        }
+      }
+    };
+    
+    checkAdminStatus();
+  }, []);
 
   // Verileri Supabase'den yükle
   useEffect(() => {
@@ -121,6 +143,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Ürün işlemleri
   const addUrun = async (urun: Urun) => {
     try {
+      if (!isAdmin) {
+        throw new Error('Bu işlem için admin yetkisi gereklidir.');
+      }
+
       const { data, error } = await supabase
         .from('products')
         .insert([{
@@ -148,6 +174,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateUrun = async (id: string, updatedUrun: Partial<Urun>) => {
     try {
+      if (!isAdmin) {
+        throw new Error('Bu işlem için admin yetkisi gereklidir.');
+      }
+
       const { error } = await supabase
         .from('products')
         .update({
@@ -175,6 +205,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeUrun = async (id: string) => {
     try {
+      if (!isAdmin) {
+        throw new Error('Bu işlem için admin yetkisi gereklidir.');
+      }
+
       const { error } = await supabase
         .from('products')
         .delete()
@@ -216,6 +250,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeHareket = async (id: string) => {
     try {
+      if (!isAdmin) {
+        throw new Error('Bu işlem için admin yetkisi gereklidir.');
+      }
+
       const { error } = await supabase
         .from('movements')
         .delete()
@@ -233,6 +271,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Kategori işlemleri
   const addKategori = async (kategori: Kategori) => {
     try {
+      if (!isAdmin) {
+        throw new Error('Bu işlem için admin yetkisi gereklidir.');
+      }
+
       const { data, error } = await supabase
         .from('categories')
         .insert([{
@@ -252,6 +294,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeKategori = async (id: string) => {
     try {
+      if (!isAdmin) {
+        throw new Error('Bu işlem için admin yetkisi gereklidir.');
+      }
+
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -277,6 +323,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     removeHareket,
     addKategori,
     removeKategori,
+    isAdmin
   };
 
   return (
