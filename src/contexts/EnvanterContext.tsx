@@ -60,7 +60,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const loadData = async () => {
     try {
-      // Kategorileri yükle
+      // First load categories
       const { data: categories, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
@@ -69,13 +69,15 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (categoriesError) {
         console.error('Kategoriler yüklenirken hata:', categoriesError);
       } else if (categories) {
-        setKategoriler(categories.map(c => ({
+        const mappedCategories = categories.map(c => ({
           id: c.id,
           ad: c.name
-        })));
+        }));
+        console.log('Loaded categories:', mappedCategories); // Debug log
+        setKategoriler(mappedCategories);
       }
 
-      // Ürünleri yükle
+      // Then load products
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*');
@@ -98,7 +100,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })));
       }
 
-      // Hareketleri yükle
+      // Finally load movements
       const { data: movements, error: movementsError } = await supabase
         .from('movements')
         .select('*');
