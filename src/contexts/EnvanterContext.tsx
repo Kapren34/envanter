@@ -70,7 +70,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (categoriesError) {
         console.error('Kategoriler yüklenirken hata:', categoriesError);
-      } else {
+      } else if (categories) {
+        console.log('Loaded categories:', categories); // Debug log
         setKategoriler(categories.map(c => ({
           id: c.id,
           ad: c.name
@@ -84,7 +85,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (productsError) {
         console.error('Ürünler yüklenirken hata:', productsError);
-      } else {
+      } else if (products) {
         setUrunler(products.map(p => ({
           id: p.id,
           ad: p.name,
@@ -107,7 +108,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (movementsError) {
         console.error('Hareketler yüklenirken hata:', movementsError);
-      } else {
+      } else if (movements) {
         setHareketler(movements.map(m => ({
           id: m.id,
           urunId: m.product_id,
