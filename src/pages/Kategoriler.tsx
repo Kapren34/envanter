@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Package, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Kategoriler = () => {
   const { kategoriler, addKategori, removeKategori } = useEnvanter();
+  const { user } = useAuth();
   const [yeniKategori, setYeniKategori] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const isAdmin = user?.role === 'admin';
 
   const handleKategoriEkle = async () => {
+    if (!isAdmin) {
+      setError('Sadece yöneticiler kategori ekleyebilir.');
+      return;
+    }
+
     if (yeniKategori.trim()) {
       try {
+        setError(null);
         await addKategori({
           id: Date.now().toString(),
           ad: yeniKategori.trim()
@@ -16,16 +27,24 @@ const Kategoriler = () => {
         setYeniKategori('');
       } catch (error) {
         console.error('Kategori eklenirken hata oluştu:', error);
+        setError('Kategori eklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
       }
     }
   };
 
   const handleKategoriSil = async (id: string) => {
+    if (!isAdmin) {
+      setError('Sadece yöneticiler kategori silebilir.');
+      return;
+    }
+
     if (window.confirm('Bu kategoriyi silmek istediğinizden emin misiniz?')) {
       try {
+        setError(null);
         await removeKategori(id);
       } catch (error) {
         console.error('Kategori silinirken hata oluştu:', error);
+        setError('Kategori silinirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
       }
     }
   };
@@ -34,7 +53,20 @@ const Kategoriler = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Kategori Yönetimi</h1>
+        {!isAdmin && (
+          <div className="flex items-center text-amber-600 bg-amber-50 px-4 py-2 rounded-lg">
+            <ShieldAlert className="h-5 w-5 mr-2" />
+            <span className="text-sm">Sadece yöneticiler kategori ekleyebilir ve silebilir</span>
+          </div>
+        )}
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+          <AlertTriangle className="h-5 w-5 mr-2" />
+          {error}
+        </div>
+      )}
 
       {/* Yeni Kategori Ekleme */}
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -46,10 +78,16 @@ const Kategoriler = () => {
             onChange={(e) => setYeniKategori(e.target.value)}
             placeholder="Kategori adı..."
             className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            disabled={!isAdmin}
           />
           <button
             onClick={handleKategoriEkle}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center"
+            className={`${
+              isAdmin 
+                ? 'bg-indigo-600 hover:bg-indigo-700' 
+                : 'bg-gray-300 cursor-not-allowed'
+            } text-white px-6 py-2 rounded-lg flex items-center`}
+            disabled={!isAdmin}
           >
             <Plus className="h-5 w-5 mr-2" />
             Ekle
@@ -72,12 +110,14 @@ const Kategoriler = () => {
                   <Package className="h-5 w-5 text-indigo-600 mr-3" />
                   <span className="text-gray-800">{kategori.ad}</span>
                 </div>
-                <button
-                  onClick={() => handleKategoriSil(kategori.id)}
-                  className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50 transition-colors"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleKategoriSil(kategori.id)}
+                    className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -85,9 +125,11 @@ const Kategoriler = () => {
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-500">Henüz kategori bulunmamaktadır.</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Yeni kategori eklemek için yukarıdaki formu kullanın.
-            </p>
+            {isAdmin && (
+              <p className="text-sm text-gray-400 mt-1">
+                Yeni kategori eklemek için yukarıdaki formu kullanın.
+              </p>
+            )}
           </div>
         )}
       </div>
