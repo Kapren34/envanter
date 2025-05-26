@@ -48,8 +48,14 @@ const Ayarlar = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+        return;
+      }
+
+      if (data) {
+        setUsers(data);
+      }
     } catch (error) {
       console.error('Kullanıcılar yüklenirken hata:', error);
     }
@@ -91,7 +97,7 @@ const Ayarlar = () => {
 
       if (error) throw error;
 
-      await loadUsers(); // Reload users list
+      await loadUsers(); // Kullanıcı listesini yeniden yükle
       setNewUser({ username: '', full_name: '', role: 'user' });
       alert('Kullanıcı başarıyla eklendi.');
     } catch (error) {
