@@ -27,12 +27,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
+    checkUser();
+  }, []);
+
+  const checkUser = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user) {
         const { data: userData, error } = await supabase
           .from('users')
           .select('id, full_name, role, settings')
-          .eq('id', session.user.id)
           .single();
 
         if (!error && userData) {
@@ -43,65 +47,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             settings: userData.settings
           });
         }
-      } else {
-        setUser(null);
       }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    } catch (error) {
+      console.error('Session check error:', error);
+    }
+  };
 
   const login = async (username: string, password: string) => {
     try {
-      // Try to authenticate using RPC function
-      const { data: isAuthenticated, error: rpcError } = await supabase
+      // First authenticate using our custom RPC function
+      const { data: isAuthenticated, error: authError } = await supabase
         .rpc('authenticate_user', {
           p_username: username,
           p_password: password
         });
 
-      if (rpcError) throw rpcError;
+      if (authError) throw authError;
 
-      if (isAuthenticated) {
-        // Get user details
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, full_name, role, settings')
-          .eq('username', username)
-          .single();
-
-        if (userError) throw userError;
-
-        if (userData) {
-          setUser({
-            id: userData.id,
-            name: userData.full_name,
-            role: userData.role as 'admin' | 'user',
-            settings: userData.settings
-          });
-          return;
-        }
+      if (!isAuthenticated) {
+        throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
-      
-      throw new Error('Geçersiz kullanıcı adı veya şifre');
+
+      // If authenticated, get user details
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name, role, settings')
+        .eq('username', username)
+        .single();
+
+      if (userError) throw userError;
+
+      if (!userData) {
+        throw new Error('Kullanıcı bilgileri bulunamadı');
+      }
+
+      // Set user in state
+      setUser({
+        id: userData.id,
+        name: userData.full_name,
+        role: userData.role as 'admin' | 'user',
+        settings: userData.settings
+      });
+
     } catch (error) {
-      console.error('Giriş hatası:', error);
+      console.error('Login error:', error);
       throw new Error('Geçersiz kullanıcı adı veya şifre');
     }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout, 
+    <AuthContext.Provider value={{
+      user,
+      login,
+      logout,
       isAuthenticated: !!user,
       isAdmin: user?.role === 'admin'
     }}>
