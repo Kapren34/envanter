@@ -26,36 +26,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.user) {
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('id, full_name, role, settings')
-          .single();
-
-        if (!error && userData) {
-          setUser({
-            id: userData.id,
-            name: userData.full_name,
-            role: userData.role as 'admin' | 'user',
-            settings: userData.settings
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Session check error:', error);
-    }
-  };
-
   const login = async (username: string, password: string) => {
     try {
-      // Call the authenticate_user function
+      // Kullanıcıyı doğrula
       const { data: authData, error: authError } = await supabase
         .rpc('authenticate_user', {
           p_username: username,
@@ -67,34 +40,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      if (!authData || !Array.isArray(authData) || authData.length === 0) {
+      if (!authData || authData.length === 0) {
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      const { user_id } = authData[0];
-
-      if (!user_id) {
-        throw new Error('Kullanıcı kimliği alınamadı');
-      }
-
-      // Get user details with explicit type casting and error handling
+      // Kullanıcı bilgilerini al
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, settings')
-        .eq('id', user_id.toString())
+        .eq('id', authData[0].user_id)
         .single();
 
-      if (userError) {
+      if (userError || !userData) {
         console.error('User data error:', userError);
         throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
-      if (!userData) {
-        console.error('User not found with ID:', user_id);
-        throw new Error('Kullanıcı bilgileri bulunamadı');
-      }
-
-      // Set user state
+      // Kullanıcı durumunu güncelle
       setUser({
         id: userData.id,
         name: userData.full_name,
@@ -110,7 +72,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
