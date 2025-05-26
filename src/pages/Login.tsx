@@ -25,7 +25,7 @@ const Login = () => {
       await login(cleanEmail, password);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Giriş yapılamadı');
+      setError('Geçersiz kullanıcı adı veya şifre');
     } finally {
       setIsLoading(false);
     }
