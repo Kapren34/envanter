@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Package } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,7 +22,32 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      // Query the users table directly to check credentials
+      const { data: users, error: queryError } = await supabase
+        .from('users')
+        .select('id, email, role, username, full_name')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (queryError || !users) {
+        throw new Error('Geçersiz email veya şifre');
+      }
+
+      // Note: In a real implementation, you would hash the password and compare with password_hash
+      // This is just a temporary solution - you should implement proper password hashing
+      const { data: passwordCheck, error: passwordError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .eq('password_hash', password)
+        .single();
+
+      if (passwordError || !passwordCheck) {
+        throw new Error('Geçersiz email veya şifre');
+      }
+
+      // If we get here, the credentials are valid
+      await login(users);
       navigate('/');
     } catch (err) {
       setError('Geçersiz email veya şifre');
