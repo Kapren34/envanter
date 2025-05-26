@@ -54,21 +54,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    if (username === 'admin' && password === 'admin123') {
-      setUser({
-        id: '1',
-        name: 'Admin User',
-        role: 'admin',
-        settings: {
-          company_name: 'POWERSOUND',
-          low_stock_limit: 5,
-          email_notifications: false,
-          auto_backup: true
+    try {
+      const { data, error } = await supabase
+        .rpc('authenticate_user', {
+          p_username: username,
+          p_password: password
+        });
+
+      if (error) throw error;
+
+      if (data) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, full_name, role, settings')
+          .eq('username', username)
+          .single();
+
+        if (userError) throw userError;
+
+        if (userData) {
+          setUser({
+            id: userData.id,
+            name: userData.full_name,
+            role: userData.role as 'admin' | 'user',
+            settings: userData.settings
+          });
+          return;
         }
-      });
-      return;
+      }
+      throw new Error('Geçersiz kullanıcı adı veya şifre');
+    } catch (error) {
+      console.error('Giriş hatası:', error);
+      throw new Error('Geçersiz kullanıcı adı veya şifre');
     }
-    throw new Error('Geçersiz kullanıcı adı veya şifre');
   };
 
   const logout = async () => {
