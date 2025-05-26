@@ -21,14 +21,28 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
+    // Trim whitespace from email and ensure lowercase
+    const cleanEmail = email.trim().toLowerCase();
+    
+    if (!cleanEmail || !password) {
+      setError('Email ve şifre gereklidir');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // First authenticate with Supabase Auth
+      // First authenticate with Supabase Auth using cleaned email
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
+        email: cleanEmail,
         password: password,
       });
 
-      if (authError) throw new Error('Geçersiz email veya şifre');
+      if (authError) {
+        if (authError.message === 'Invalid login credentials') {
+          throw new Error('Email veya şifre hatalı');
+        }
+        throw new Error(authError.message);
+      }
 
       if (!authData.user) throw new Error('Kullanıcı bulunamadı');
 
@@ -88,6 +102,7 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="ornek@email.com"
                   />
                 </div>
               </div>
