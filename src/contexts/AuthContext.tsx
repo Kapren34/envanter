@@ -27,29 +27,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   const login = async (username: string, password: string) => {
-    if (!username || !password) {
-      throw new Error('Kullanıcı adı ve şifre gereklidir');
-    }
-
     try {
-      // First check if the user exists before attempting authentication
-      const { data: userExists, error: userCheckError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('username', username)
-        .maybeSingle();
-
-      if (userCheckError) {
-        console.error('User check error:', userCheckError.message);
-        throw new Error('Kullanıcı bilgileri kontrol edilemedi');
-      }
-
-      if (!userExists) {
-        console.error('User does not exist:', username);
-        throw new Error('Kullanıcı bulunamadı');
-      }
-
-      // Authenticate user
+      // Call the authenticate_user function
       const { data: authData, error: authError } = await supabase
         .rpc('authenticate_user', {
           p_username: username,
@@ -57,33 +36,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
       if (authError) {
-        console.error('Authentication error:', authError.message);
+        console.error('Authentication error:', authError);
         throw new Error('Kimlik doğrulama başarısız');
       }
 
       if (!authData || authData.length === 0) {
-        console.error('Authentication failed: No data returned');
-        throw new Error('Geçersiz şifre');
+        throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      // Get user data with proper error handling
+      // Get user details
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, settings')
-        .eq('username', username)
-        .maybeSingle();
+        .eq('id', authData[0].user_id)
+        .single();
 
       if (userError) {
-        console.error('User data error:', userError.message);
+        console.error('User data error:', userError);
         throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
-      if (!userData) {
-        console.error('User data not found after authentication');
-        throw new Error('Kullanıcı bilgileri bulunamadı');
-      }
-
-      // Update user state
       setUser({
         id: userData.id,
         name: userData.full_name,
@@ -92,18 +64,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
     } catch (error) {
-      console.error('Login process error:', error);
+      console.error('Login error:', error);
       throw error;
     }
   };
 
   const logout = async () => {
-    try {
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
+    setUser(null);
   };
 
   return (

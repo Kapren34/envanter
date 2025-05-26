@@ -20,18 +20,11 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
-    // Basic form validation
-    if (!username.trim() || !password.trim()) {
-      setError('Lütfen kullanıcı adı ve şifre giriniz');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      await login(username.trim(), password.trim());
+      await login(username, password);
       navigate('/');
     } catch (err: any) {
-      console.error('Login error details:', err);
+      console.error('Login error:', err);
       setError(err.message || 'Giriş yapılırken bir hata oluştu');
     } finally {
       setIsLoading(false);
