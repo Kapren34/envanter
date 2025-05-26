@@ -28,6 +28,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
+      // First check if the user exists before attempting authentication
+      const { data: userExists, error: userCheckError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (userCheckError) {
+        console.error('User check error:', userCheckError);
+        throw new Error('Kullanıcı bilgileri kontrol edilemedi');
+      }
+
+      if (!userExists) {
+        throw new Error('Geçersiz kullanıcı adı veya şifre');
+      }
+
       // Authenticate user
       const { data: authData, error: authError } = await supabase
         .rpc('authenticate_user', {
@@ -48,8 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, settings')
-        .eq('username', username)  // Changed from id to username for more reliable lookup
-        .maybeSingle(); // Using maybeSingle() instead of single() to handle no results gracefully
+        .eq('username', username)
+        .maybeSingle();
 
       if (userError) {
         console.error('User data error:', userError);
@@ -57,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!userData) {
-        throw new Error('Kullanıcı bulunamadı');
+        throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
       // Update user state
