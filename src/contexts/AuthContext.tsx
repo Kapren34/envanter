@@ -55,35 +55,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      // First authenticate using our custom RPC function
+      // Authenticate using RPC function
       const { data: authResult, error: authError } = await supabase
         .rpc('authenticate_user', {
           p_username: username,
           p_password: password
         });
 
-      if (authError) throw authError;
-
-      if (!authResult || !authResult[0]?.user_id) {
+      if (authError) {
+        console.error('Authentication error:', authError);
         throw new Error('Geçersiz kullanıcı adı veya şifre');
       }
 
-      const userId = authResult[0].user_id;
+      if (!authResult || authResult.length === 0) {
+        throw new Error('Geçersiz kullanıcı adı veya şifre');
+      }
 
-      // Get user details using the user_id from authentication
+      const { user_id, role } = authResult[0];
+
+      // Get user details
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, settings')
-        .eq('id', userId)
+        .eq('id', user_id)
         .single();
 
-      if (userError) throw userError;
-
-      if (!userData) {
-        throw new Error('Kullanıcı bilgileri bulunamadı');
+      if (userError) {
+        console.error('User data error:', userError);
+        throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
-      // Set user in state
       setUser({
         id: userData.id,
         name: userData.full_name,
