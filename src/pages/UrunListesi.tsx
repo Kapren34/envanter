@@ -49,8 +49,24 @@ const UrunListesi = () => {
     setSelectedUrun(urunId);
   };
   
-  // Konumlar ve durumlar (normalde API'den gelecek)
-  const lokasyonlar = ['Depo', 'Merit Park', 'Merit Royal', 'Merit Cristal', 'Lord Place', 'Kaya Plazzo', 'Cratos', 'Acapolco', 'Elexsus', 'Chamada', 'Limak', 'Kaya Artemis', 'Concorde', 'Concorde Lefkosa', 'Grand Saphire'];
+  // Konumlar ve durumlar
+  const lokasyonlar = [
+    'Depo',
+    'Merit Park',
+    'Merit Royal',
+    'Merit Cristal',
+    'Lord Place',
+    'Kaya Plazzo',
+    'Cratos',
+    'Acapolco',
+    'Elexsus',
+    'Chamada',
+    'Limak',
+    'Kaya Artemis',
+    'Concorde',
+    'Concorde Lefkosa',
+    'Grand Saphire'
+  ];
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
   return (
@@ -188,18 +204,6 @@ const UrunListesi = () => {
                 <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('stokMiktari')}
-                >
-                  <div className="flex items-center">
-                    Stok
-                    {sortBy === 'stokMiktari' && (
-                      sortDir === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort('durum')}
                 >
                   <div className="flex items-center">
@@ -246,18 +250,11 @@ const UrunListesi = () => {
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={`text-sm font-medium ${
-                        urun.stokMiktari < 5 ? 'text-red-600' : 'text-gray-900'
-                      }`}>
-                        {urun.stokMiktari} adet
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         urun.durum === 'Depoda' ? 'bg-green-100 text-green-800' :
                         urun.durum === 'Dışarıda' ? 'bg-blue-100 text-blue-800' :
                         urun.durum === 'Serviste' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-purple-100 text-purple-800'
+                        'bg-purple-100  text-purple-800'
                       }`}>
                         {urun.durum}
                       </span>

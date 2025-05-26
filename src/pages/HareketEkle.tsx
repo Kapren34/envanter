@@ -5,14 +5,14 @@ import { useEnvanter } from '../contexts/EnvanterContext';
 
 const HareketEkle = () => {
   const navigate = useNavigate();
-  const { urunler, addHareket, updateUrunStok } = useEnvanter();
+  const { urunler, addHareket } = useEnvanter();
   
   const [formData, setFormData] = useState({
     urunId: '',
     tip: 'Giriş',
     miktar: 1,
     aciklama: '',
-    lokasyon: 'Merkez',
+    lokasyon: 'Depo',
   });
   
   // Seçili ürün bilgisi
@@ -41,21 +41,28 @@ const HareketEkle = () => {
     // Hareketi ekle
     addHareket(yeniHareket);
     
-    // Ürün stok durumunu güncelle
-    if (selectedUrun) {
-      const yeniStok = formData.tip === 'Giriş' 
-        ? selectedUrun.stokMiktari + formData.miktar
-        : Math.max(0, selectedUrun.stokMiktari - formData.miktar);
-      
-      updateUrunStok(selectedUrun.id, yeniStok);
-    }
-    
     // Hareket listesine dön
     navigate('/hareketler');
   };
   
   // Lokasyon seçenekleri
-  const lokasyonlar = ['Merkez', 'Otel A', 'Otel B', 'Otel C', 'Depo'];
+  const lokasyonlar = [
+    'Depo',
+    'Merit Park',
+    'Merit Royal',
+    'Merit Cristal',
+    'Lord Place',
+    'Kaya Plazzo',
+    'Cratos',
+    'Acapolco',
+    'Elexsus',
+    'Chamada',
+    'Limak',
+    'Kaya Artemis',
+    'Concorde',
+    'Concorde Lefkosa',
+    'Grand Saphire'
+  ];
 
   return (
     <div className="space-y-6">
@@ -86,7 +93,7 @@ const HareketEkle = () => {
               <option value="">Ürün Seçin</option>
               {urunler.map((urun) => (
                 <option key={urun.id} value={urun.id}>
-                  {urun.ad} - {urun.marka} {urun.model} ({urun.stokMiktari} adet mevcut)
+                  {urun.ad} - {urun.marka} {urun.model}
                 </option>
               ))}
             </select>
@@ -99,9 +106,6 @@ const HareketEkle = () => {
                 <div>
                   <h3 className="text-md font-medium text-gray-800">{selectedUrun.ad}</h3>
                   <p className="text-sm text-gray-600">{selectedUrun.marka} {selectedUrun.model}</p>
-                  <p className="text-sm mt-1">
-                    <span className="font-medium">Mevcut Stok:</span> {selectedUrun.stokMiktari} adet
-                  </p>
                   <p className="text-sm">
                     <span className="font-medium">Kategori:</span> {selectedUrun.kategori}
                   </p>
@@ -178,14 +182,6 @@ const HareketEkle = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
-          
-          {/* Uyarı Mesajı */}
-          {formData.tip === 'Çıkış' && selectedUrun && formData.miktar > selectedUrun.stokMiktari && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-              <p className="text-sm font-medium">Uyarı: Çıkış miktarı mevcut stoktan fazla!</p>
-              <p className="text-xs mt-1">Mevcut stok: {selectedUrun.stokMiktari} adet</p>
-            </div>
-          )}
         </div>
         
         {/* Butonlar */}
@@ -200,7 +196,6 @@ const HareketEkle = () => {
           <button
             type="submit"
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
-            disabled={formData.tip === 'Çıkış' && selectedUrun && formData.miktar > selectedUrun.stokMiktari}
           >
             <Save className="h-5 w-5 mr-2" />
             Kaydet

@@ -65,7 +65,7 @@ const UrunEkle = () => {
     'Kaya Artemis',
     'Concorde',
     'Concorde Lefkosa',
-    'Grand Saphire',
+    'Grand Saphire'
   ];
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
