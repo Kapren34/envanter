@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Tip tanımlamaları
 interface Urun {
   id: string;
   ad: string;
@@ -53,9 +52,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [urunler, setUrunler] = useState<Urun[]>([]);
   const [hareketler, setHareketler] = useState<Hareket[]>([]);
   const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
-  const [isAdmin, setIsAdmin] = useState(true); // Always admin for now
+  const [isAdmin, setIsAdmin] = useState(true);
 
-  // Verileri Supabase'den yükle
   useEffect(() => {
     loadData();
   }, []);
@@ -67,11 +65,10 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .from('categories')
         .select('*')
         .order('name', { ascending: true });
-      
+
       if (categoriesError) {
         console.error('Kategoriler yüklenirken hata:', categoriesError);
       } else if (categories) {
-        console.log('Loaded categories:', categories); // Debug log
         setKategoriler(categories.map(c => ({
           id: c.id,
           ad: c.name
@@ -82,7 +79,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*');
-      
+
       if (productsError) {
         console.error('Ürünler yüklenirken hata:', productsError);
       } else if (products) {
@@ -105,7 +102,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { data: movements, error: movementsError } = await supabase
         .from('movements')
         .select('*');
-      
+
       if (movementsError) {
         console.error('Hareketler yüklenirken hata:', movementsError);
       } else if (movements) {
@@ -172,7 +169,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      setUrunler(urunler.map((urun) => 
+      setUrunler(urunler.map((urun) =>
         urun.id === id ? { ...urun, ...updatedUrun } : urun
       ));
     } catch (error) {
