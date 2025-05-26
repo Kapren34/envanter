@@ -10,6 +10,12 @@ interface User {
   full_name: string;
   role: string;
   created_at: string;
+  settings?: {
+    company_name: string;
+    low_stock_limit: number;
+    email_notifications: boolean;
+    auto_backup: boolean;
+  };
 }
 
 const Ayarlar = () => {
