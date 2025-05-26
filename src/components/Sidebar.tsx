@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Package, RefreshCw, BarChart3, Settings, SpeakerIcon, Lightbulb, Monitor, Warehouse, FolderTree } from 'lucide-react';
+import { Home, Package, RefreshCw, BarChart3, Settings, SpeakerIcon, Lightbulb, Monitor, Warehouse } from 'lucide-react';
 
 const Sidebar = () => {
   return (
@@ -48,19 +48,6 @@ const Sidebar = () => {
         >
           <Package className="h-5 w-5 mr-3" />
           <span>Ürünler</span>
-        </NavLink>
-        <NavLink
-          to="/kategoriler"
-          className={({ isActive }) =>
-            `flex items-center px-4 py-3 transition duration-150 rounded-lg ${
-              isActive
-                ? 'bg-indigo-800 text-white'
-                : 'text-indigo-100 hover:bg-indigo-800'
-            }`
-          }
-        >
-          <FolderTree className="h-5 w-5 mr-3" />
-          <span>Kategoriler</span>
         </NavLink>
         <NavLink
           to="/hareketler"
