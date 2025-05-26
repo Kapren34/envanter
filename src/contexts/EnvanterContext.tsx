@@ -60,30 +60,30 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const loadData = async () => {
     try {
-      // First load categories
+      // Load categories
       const { data: categories, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
         .order('name', { ascending: true });
 
       if (categoriesError) {
-        console.error('Kategoriler yüklenirken hata:', categoriesError);
+        console.error('Categories loading error:', categoriesError);
       } else if (categories) {
         const mappedCategories = categories.map(c => ({
           id: c.id,
           ad: c.name
         }));
-        console.log('Loaded categories:', mappedCategories); // Debug log
+        console.log('Loaded categories:', mappedCategories);
         setKategoriler(mappedCategories);
       }
 
-      // Then load products
+      // Load products
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*');
 
       if (productsError) {
-        console.error('Ürünler yüklenirken hata:', productsError);
+        console.error('Products loading error:', productsError);
       } else if (products) {
         setUrunler(products.map(p => ({
           id: p.id,
@@ -100,13 +100,13 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })));
       }
 
-      // Finally load movements
+      // Load movements
       const { data: movements, error: movementsError } = await supabase
         .from('movements')
         .select('*');
 
       if (movementsError) {
-        console.error('Hareketler yüklenirken hata:', movementsError);
+        console.error('Movements loading error:', movementsError);
       } else if (movements) {
         setHareketler(movements.map(m => ({
           id: m.id,
@@ -121,11 +121,11 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })));
       }
     } catch (error) {
-      console.error('Veri yükleme hatası:', error);
+      console.error('Data loading error:', error);
     }
   };
 
-  // Ürün işlemleri
+  // Product operations
   const addUrun = async (urun: Urun) => {
     try {
       const { data, error } = await supabase
@@ -148,7 +148,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setUrunler([...urunler, { ...urun, id: data.id }]);
     } catch (error) {
-      console.error('Ürün ekleme hatası:', error);
+      console.error('Product addition error:', error);
       throw error;
     }
   };
@@ -175,7 +175,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         urun.id === id ? { ...urun, ...updatedUrun } : urun
       ));
     } catch (error) {
-      console.error('Ürün güncelleme hatası:', error);
+      console.error('Product update error:', error);
       throw error;
     }
   };
@@ -192,12 +192,12 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setUrunler(urunler.filter((urun) => urun.id !== id));
       setHareketler(hareketler.filter((hareket) => hareket.urunId !== id));
     } catch (error) {
-      console.error('Ürün silme hatası:', error);
+      console.error('Product deletion error:', error);
       throw error;
     }
   };
 
-  // Hareket işlemleri
+  // Movement operations
   const addHareket = async (hareket: Hareket) => {
     try {
       const { data, error } = await supabase
@@ -216,7 +216,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setHareketler([...hareketler, { ...hareket, id: data.id }]);
     } catch (error) {
-      console.error('Hareket ekleme hatası:', error);
+      console.error('Movement addition error:', error);
       throw error;
     }
   };
@@ -232,12 +232,12 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setHareketler(hareketler.filter((hareket) => hareket.id !== id));
     } catch (error) {
-      console.error('Hareket silme hatası:', error);
+      console.error('Movement deletion error:', error);
       throw error;
     }
   };
 
-  // Kategori işlemleri
+  // Category operations
   const addKategori = async (kategori: Kategori) => {
     try {
       const { data, error } = await supabase
@@ -252,7 +252,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setKategoriler([...kategoriler, { ...kategori, id: data.id }]);
     } catch (error) {
-      console.error('Kategori ekleme hatası:', error);
+      console.error('Category addition error:', error);
       throw error;
     }
   };
@@ -268,7 +268,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setKategoriler(kategoriler.filter((kategori) => kategori.id !== id));
     } catch (error) {
-      console.error('Kategori silme hatası:', error);
+      console.error('Category deletion error:', error);
       throw error;
     }
   };
