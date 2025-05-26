@@ -10,6 +10,7 @@ import HareketEkle from './pages/HareketEkle';
 import Raporlar from './pages/Raporlar';
 import Ayarlar from './pages/Ayarlar';
 import Depo from './pages/Depo';
+import Kategoriler from './pages/Kategoriler';
 import { EnvanterProvider } from './contexts/EnvanterContext';
 import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
@@ -28,6 +29,7 @@ function App() {
               <Route path="urunler/:id" element={<UrunDetay />} />
               <Route path="hareketler" element={<Hareketler />} />
               <Route path="hareketler/ekle" element={<HareketEkle />} />
+              <Route path="kategoriler" element={<Kategoriler />} />
               <Route path="raporlar" element={<Raporlar />} />
               <Route path="ayarlar" element={<Ayarlar />} />
             </Route>
