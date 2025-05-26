@@ -53,27 +53,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [urunler, setUrunler] = useState<Urun[]>([]);
   const [hareketler, setHareketler] = useState<Hareket[]>([]);
   const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        if (!error && data) {
-          setIsAdmin(data.role === 'admin');
-        }
-      }
-    };
-    
-    checkAdminStatus();
-  }, []);
+  const [isAdmin, setIsAdmin] = useState(true); // Always admin for now
 
   // Verileri Supabase'den yükle
   useEffect(() => {
@@ -82,59 +62,64 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const loadData = async () => {
     try {
+      // Kategorileri yükle
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (categoriesError) {
+        console.error('Kategoriler yüklenirken hata:', categoriesError);
+      } else {
+        setKategoriler(categories.map(c => ({
+          id: c.id,
+          ad: c.name
+        })));
+      }
+
       // Ürünleri yükle
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('*');
       
-      if (productsError) throw productsError;
-
-      // Kategorileri yükle
-      const { data: categories, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*');
-      
-      if (categoriesError) throw categoriesError;
+      if (productsError) {
+        console.error('Ürünler yüklenirken hata:', productsError);
+      } else {
+        setUrunler(products.map(p => ({
+          id: p.id,
+          ad: p.name,
+          marka: p.brand,
+          model: p.model,
+          kategori: p.category_id,
+          durum: p.status,
+          lokasyon: p.location_id,
+          seriNo: p.serial_number,
+          aciklama: p.description,
+          barkod: p.barcode,
+          eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
+        })));
+      }
 
       // Hareketleri yükle
       const { data: movements, error: movementsError } = await supabase
         .from('movements')
         .select('*');
       
-      if (movementsError) throw movementsError;
-
-      // Verileri state'e kaydet
-      setUrunler(products.map(p => ({
-        id: p.id,
-        ad: p.name,
-        marka: p.brand,
-        model: p.model,
-        kategori: p.category_id,
-        durum: p.status,
-        lokasyon: p.location_id,
-        seriNo: p.serial_number,
-        aciklama: p.description,
-        barkod: p.barcode,
-        eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
-      })));
-
-      setKategoriler(categories.map(c => ({
-        id: c.id,
-        ad: c.name
-      })));
-
-      setHareketler(movements.map(m => ({
-        id: m.id,
-        urunId: m.product_id,
-        urunAdi: urunler.find(u => u.id === m.product_id)?.ad || '',
-        tip: m.type,
-        miktar: m.quantity,
-        tarih: new Date(m.created_at).toLocaleDateString('tr-TR'),
-        aciklama: m.description,
-        lokasyon: m.location_id,
-        kullanici: m.user_id
-      })));
-
+      if (movementsError) {
+        console.error('Hareketler yüklenirken hata:', movementsError);
+      } else {
+        setHareketler(movements.map(m => ({
+          id: m.id,
+          urunId: m.product_id,
+          urunAdi: urunler.find(u => u.id === m.product_id)?.ad || '',
+          tip: m.type,
+          miktar: m.quantity,
+          tarih: new Date(m.created_at).toLocaleDateString('tr-TR'),
+          aciklama: m.description,
+          lokasyon: m.location_id,
+          kullanici: m.user_id
+        })));
+      }
     } catch (error) {
       console.error('Veri yükleme hatası:', error);
     }
@@ -143,10 +128,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Ürün işlemleri
   const addUrun = async (urun: Urun) => {
     try {
-      if (!isAdmin) {
-        throw new Error('Bu işlem için admin yetkisi gereklidir.');
-      }
-
       const { data, error } = await supabase
         .from('products')
         .insert([{
@@ -174,10 +155,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateUrun = async (id: string, updatedUrun: Partial<Urun>) => {
     try {
-      if (!isAdmin) {
-        throw new Error('Bu işlem için admin yetkisi gereklidir.');
-      }
-
       const { error } = await supabase
         .from('products')
         .update({
@@ -205,10 +182,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeUrun = async (id: string) => {
     try {
-      if (!isAdmin) {
-        throw new Error('Bu işlem için admin yetkisi gereklidir.');
-      }
-
       const { error } = await supabase
         .from('products')
         .delete()
@@ -250,10 +223,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeHareket = async (id: string) => {
     try {
-      if (!isAdmin) {
-        throw new Error('Bu işlem için admin yetkisi gereklidir.');
-      }
-
       const { error } = await supabase
         .from('movements')
         .delete()
@@ -271,10 +240,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Kategori işlemleri
   const addKategori = async (kategori: Kategori) => {
     try {
-      if (!isAdmin) {
-        throw new Error('Bu işlem için admin yetkisi gereklidir.');
-      }
-
       const { data, error } = await supabase
         .from('categories')
         .insert([{
@@ -294,10 +259,6 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeKategori = async (id: string) => {
     try {
-      if (!isAdmin) {
-        throw new Error('Bu işlem için admin yetkisi gereklidir.');
-      }
-
       const { error } = await supabase
         .from('categories')
         .delete()
