@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface User {
   id: string;
@@ -9,7 +10,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -19,31 +20,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Kayıtlı kullanıcı bilgilerini kontrol et
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Supabase oturum durumunu kontrol et
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('id, full_name, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!error && userData) {
+          setUser({
+            id: userData.id,
+            name: userData.full_name,
+            role: userData.role as 'admin' | 'user'
+          });
+        }
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (username: string, password: string) => {
-    // Kullanıcı doğrulama
-    if (username === 'admin' && password === 'admin123') {
-      const user = {
-        id: '1',
-        name: 'Admin',
-        role: 'admin' as const,
-      };
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: username,
+      password: password
+    });
+
+    if (error) {
       throw new Error('Geçersiz kullanıcı adı veya şifre');
+    }
+
+    if (data.user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name, role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError || !userData) {
+        throw new Error('Kullanıcı bilgileri alınamadı');
+      }
+
+      setUser({
+        id: userData.id,
+        name: userData.full_name,
+        role: userData.role as 'admin' | 'user'
+      });
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('user');
   };
 
   return (
