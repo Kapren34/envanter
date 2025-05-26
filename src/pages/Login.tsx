@@ -20,11 +20,19 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
+    // Basic form validation
+    if (!username.trim() || !password.trim()) {
+      setError('Lütfen kullanıcı adı ve şifre giriniz');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await login(username, password);
+      await login(username.trim(), password.trim());
       navigate('/');
-    } catch (err) {
-      setError('Geçersiz kullanıcı adı veya şifre');
+    } catch (err: any) {
+      console.error('Login error details:', err);
+      setError(err.message || 'Giriş yapılırken bir hata oluştu');
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +95,7 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Şifrenizi girin"
                   />
                 </div>
               </div>
