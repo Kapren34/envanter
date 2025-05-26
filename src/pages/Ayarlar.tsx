@@ -1,20 +1,54 @@
-import React, { useState } from 'react';
-import { Save, Plus, Trash2, Shield, Settings as SettingsIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Plus, Trash2, Shield, Settings as SettingsIcon, UserPlus, Key } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+
+interface User {
+  id: string;
+  username: string;
+  full_name: string;
+  role: string;
+  created_at: string;
+}
 
 const Ayarlar = () => {
   const { kategoriler, addKategori, removeKategori } = useEnvanter();
   const { user, isAdmin } = useAuth();
   const [yeniKategori, setYeniKategori] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [newUser, setNewUser] = useState({
+    username: '',
+    full_name: '',
+    role: 'user'
+  });
   const [settings, setSettings] = useState(user?.settings || {
     company_name: 'POWERSOUND',
     low_stock_limit: 5,
     email_notifications: false,
     auto_backup: true
   });
-  
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadUsers();
+    }
+  }, [isAdmin]);
+
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Kullanıcılar yüklenirken hata:', error);
+    }
+  };
+
   const handleKategoriEkle = () => {
     if (yeniKategori.trim()) {
       addKategori({
@@ -33,11 +67,52 @@ const Ayarlar = () => {
         .eq('id', user?.id);
 
       if (error) throw error;
-
       alert('Ayarlar başarıyla kaydedildi.');
     } catch (error) {
       console.error('Ayarlar kaydedilirken hata oluştu:', error);
       alert('Ayarlar kaydedilirken bir hata oluştu.');
+    }
+  };
+
+  const handleAddUser = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          username: newUser.username,
+          full_name: newUser.full_name,
+          role: newUser.role
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setUsers([data, ...users]);
+      setNewUser({ username: '', full_name: '', role: 'user' });
+      alert('Kullanıcı başarıyla eklendi.');
+    } catch (error) {
+      console.error('Kullanıcı eklenirken hata:', error);
+      alert('Kullanıcı eklenirken bir hata oluştu.');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setUsers(users.filter(u => u.id !== userId));
+      alert('Kullanıcı başarıyla silindi.');
+    } catch (error) {
+      console.error('Kullanıcı silinirken hata:', error);
+      alert('Kullanıcı silinirken bir hata oluştu.');
     }
   };
 
@@ -65,37 +140,105 @@ const Ayarlar = () => {
         </div>
       </div>
 
-      {/* Admin Bilgileri */}
+      {/* Kullanıcı Yönetimi */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <Shield className="h-5 w-5 mr-2 text-indigo-600" />
-          Admin Hesap Bilgileri
+          <UserPlus className="h-5 w-5 mr-2 text-indigo-600" />
+          Kullanıcı Yönetimi
         </h2>
-        
-        <div className="bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-lg">
-              {user?.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-              <p className="text-xs text-gray-500">Yönetici</p>
-            </div>
+
+        {/* Yeni Kullanıcı Formu */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Kullanıcı Ekle</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+              type="text"
+              placeholder="Kullanıcı adı"
+              value={newUser.username}
+              onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+              className="border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <input
+              type="text"
+              placeholder="Ad Soyad"
+              value={newUser.full_name}
+              onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+              className="border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <select
+              value={newUser.role}
+              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+              className="border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="user">Kullanıcı</option>
+              <option value="admin">Yönetici</option>
+            </select>
           </div>
-          
-          <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Kullanıcı Adı</p>
-              <p className="font-medium">admin</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Şifre</p>
-              <p className="font-medium">admin123</p>
-            </div>
-          </div>
+          <button
+            onClick={handleAddUser}
+            className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Kullanıcı Ekle
+          </button>
+        </div>
+
+        {/* Kullanıcı Listesi */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Kullanıcı Adı
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ad Soyad
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Rol
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Kayıt Tarihi
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{user.username}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{user.full_name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      user.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {user.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(user.created_at).toLocaleDateString('tr-TR')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-      
+
       {/* Kategoriler */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Kategori Yönetimi</h2>
