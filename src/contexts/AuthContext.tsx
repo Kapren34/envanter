@@ -5,6 +5,7 @@ interface User {
   id: string;
   email: string | null;
   role: 'admin' | 'user';
+  name?: string;
 }
 
 interface AuthContextType {
@@ -21,25 +22,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Aktif session kontrolü
-    supabase.auth.getSession().then(({ data }) => {
+    // Check active session
+    supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.user) {
-        setUser({
-          id: data.session.user.id,
-          email: data.session.user.email,
-          role: 'user', // istersen role'u DB'den çekebilirsin
-        });
+        // Get user role from users table
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('role, full_name')
+          .eq('id', data.session.user.id)
+          .single();
+
+        if (!error && userData) {
+          setUser({
+            id: data.session.user.id,
+            email: data.session.user.email,
+            role: userData.role as 'admin' | 'user',
+            name: userData.full_name
+          });
+        }
       }
     });
 
-    // Auth state değişikliklerini dinle (login, logout, expire)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          role: 'user', // istersen role'u DB'den çekebilirsin
-        });
+        // Get user role from users table
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('role, full_name')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!error && userData) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            role: userData.role as 'admin' | 'user',
+            name: userData.full_name
+          });
+        }
       } else {
         setUser(null);
       }
