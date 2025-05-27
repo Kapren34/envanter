@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Camera } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
-import { generateBarkod } from '../utils/barkodUtils';
+import { generateBarkod, checkExistingBarkod } from '../utils/barkodUtils';
 import { supabase } from '../lib/supabase';
 import React, { useState, useEffect } from 'react';
 
@@ -63,9 +63,19 @@ const UrunEkle = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const barcode = generateBarkod();
 
     try {
+      // Check if a product with the same name, brand, and model exists
+      const existingBarkod = await checkExistingBarkod(
+        supabase,
+        formData.ad,
+        formData.marka,
+        formData.model
+      );
+
+      // Use existing barcode or generate new one
+      const barcode = existingBarkod || generateBarkod();
+
       const { data, error } = await supabase
         .from('products')
         .insert([
@@ -78,9 +88,9 @@ const UrunEkle = () => {
             serial_number: formData.seriNo || null,
             description: formData.aciklama || null,
             status: formData.durum || 'Depoda',
-            location_id: formData.lokasyon || null, // this is now UUID from DB
+            location_id: formData.lokasyon || null,
             photo_url: null,
-            created_by: null, // set current user id here if available
+            created_by: null,
           },
         ]);
 
