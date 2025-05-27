@@ -56,28 +56,55 @@ useEffect(() => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    // Yeni barkod oluştur
-    const barkod = generateBarkod();
+  const barkod = generateBarkod();
 
-    try {
-      // Yeni ürün ekle
-      await addUrun({
-        ...formData,
-        id: Date.now().toString(),
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .insert([{
+        ad: formData.ad,
+        marka: formData.marka,
+        model: formData.model,
+        kategori: formData.kategori,
+        durum: formData.durum,
+        lokasyon: formData.lokasyon,
+        seriNo: formData.seriNo,
+        aciklama: formData.aciklama,
         barkod,
-        eklemeTarihi: new Date().toLocaleDateString(),
-      });
+        eklemeTarihi: new Date().toISOString(), // Tarihi ISO formatta gönderelim
+      }]);
 
-      // Ürün listesine dön
-      navigate('/urunler');
-    } catch (error) {
-      console.error('Ürün ekleme hatası:', error);
-      alert('Ürün eklenirken bir hata oluştu.');
+    if (error) {
+      throw error;
     }
-  };
+
+    // Eğer addUrun fonksiyonunu da kullanıyorsanız, onu da çağırabilirsiniz
+    if (addUrun) {
+      addUrun({
+        id: data[0].id, // Supabase insert sonrası dönen id
+        ad: formData.ad,
+        marka: formData.marka,
+        model: formData.model,
+        kategori: formData.kategori,
+        durum: formData.durum,
+        lokasyon: formData.lokasyon,
+        seriNo: formData.seriNo,
+        aciklama: formData.aciklama,
+        barkod,
+        eklemeTarihi: data[0].eklemeTarihi,
+      });
+    }
+
+    navigate('/urunler');
+  } catch (error) {
+    console.error('Ürün ekleme hatası:', error);
+    alert('Ürün eklenirken bir hata oluştu.');
+  }
+};
+
 
   // Lokasyon ve durum seçenekleri
   const lokasyonlar = [
