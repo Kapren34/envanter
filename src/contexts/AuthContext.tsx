@@ -9,7 +9,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -21,24 +21,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check active session on mount
+    // Aktif session kontrolü
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
-        setUser({ 
-          id: data.session.user.id, 
-          email: data.session.user.email, 
-          role: 'user' // optionally fetch role from your DB if needed
+        setUser({
+          id: data.session.user.id,
+          email: data.session.user.email,
+          role: 'user', // istersen role'u DB'den çekebilirsin
         });
       }
     });
 
-    // Subscribe to auth changes (login/logout/expire)
+    // Auth state değişikliklerini dinle (login, logout, expire)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser({ 
-          id: session.user.id, 
-          email: session.user.email, 
-          role: 'user' // optionally fetch role from your DB
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          role: 'user', // istersen role'u DB'den çekebilirsin
         });
       } else {
         setUser(null);
@@ -50,10 +50,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const login = async (identifier: string, password: string) => {
+    // Basit email kontrolü (regex)
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    let emailToUse = identifier;
+
+    if (!isEmail) {
+      // Email değilse username olarak varsay, email'ini DB'den çek
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('username', identifier)
+        .single();
+
+      if (userError || !userData?.email) {
+        throw new Error('Kullanıcı adı bulunamadı');
+      }
+      emailToUse = userData.email;
+    }
+
+    // Email ve şifre ile giriş yap
+    const { error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
     if (error) throw error;
-    // No need to manually set user here, onAuthStateChange will do that
+    // Kullanıcı set işlemi onAuthStateChange ile otomatik yapılacak
   };
 
   const logout = async () => {
