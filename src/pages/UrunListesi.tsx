@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import { exportToExcel } from '../utils/excelUtils';
-import { supabase } from '../lib/supabase';
 
 const UrunListesi = () => {
   const { urunler, kategoriler, removeUrun, addHareket } = useEnvanter();
@@ -22,25 +21,6 @@ const UrunListesi = () => {
   const [movementDescription, setMovementDescription] = useState('');
   const [movementLocation, setMovementLocation] = useState('');
   
-  useEffect(() => {
-    const fetchUrunler = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*');
-      
-      if (error) {
-        console.error('Error fetching products:', error);
-        return;
-      }
-
-      if (data) {
-        setUrunler(data);
-      }
-    };
-
-    fetchUrunler();
-  }, []);
-
   // Filtreleme
   const filteredUrunler = urunler.filter((urun) => {
     const matchesSearch = urun.ad.toLowerCase().includes(searchTerm.toLowerCase()) || 
