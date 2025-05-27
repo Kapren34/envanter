@@ -34,7 +34,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
         </button>
         <div className="flex items-center space-x-3">
           <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
-            {user?.name.split(' ').map(n => n[0]).join('')}
+            {user?.name?.split(' ').map(n => n[0]).join('') || '?'}
           </div>
           <button
             onClick={logout}
