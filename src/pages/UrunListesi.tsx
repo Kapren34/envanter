@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
@@ -31,7 +31,19 @@ const UrunListesi = () => {
     
     return matchesSearch && matchesCategory && matchesStatus && matchesLocation;
   });
-  
+  useEffect(() => {
+  const fetchUrunler = async () => {
+    const snapshot = await getDocs(collection(db, 'urunler'));
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setUrunler(data);
+  };
+
+  fetchUrunler();
+}, []);
+
   // Sıralama
   const sortedUrunler = [...filteredUrunler].sort((a, b) => {
     if (sortDir === 'asc') {
