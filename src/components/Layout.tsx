@@ -10,7 +10,6 @@ const Layout = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const sidebar = document.getElementById('sidebar');
@@ -39,20 +38,17 @@ const Layout = () => {
         />
       )}
 
-      {/* Sidebar Container with Shadow */}
+      {/* Sidebar Container */}
       <div 
         id="sidebar"
         className={`
           fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out
-          md:relative md:translate-x-0 md:shadow-xl
+          md:relative md:translate-x-0 md:shadow-lg
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <Sidebar />
       </div>
-
-      {/* Vertical Divider */}
-      <div className="hidden md:block w-px bg-gradient-to-b from-indigo-900/10 via-indigo-900/20 to-indigo-900/10 shadow-xl" />
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
