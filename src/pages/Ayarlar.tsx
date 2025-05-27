@@ -29,18 +29,16 @@ const Ayarlar = () => {
     full_name: '',
     role: 'user'
   });
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState(user?.settings || {
     company_name: 'POWERSOUND',
     low_stock_limit: 5,
     email_notifications: false,
     auto_backup: true
   });
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
       loadUsers();
-      loadSettings();
     }
   }, [isAdmin]);
 
@@ -51,58 +49,32 @@ const Ayarlar = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+        return;
+      }
+
+      if (data) {
+        console.log('Yüklenen kullanıcılar:', data);
+        setUsers(data);
+      }
     } catch (error) {
       console.error('Kullanıcılar yüklenirken hata:', error);
     }
   };
 
-  const loadSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('settings')
-        .eq('id', user?.id)
-        .single();
-
-      if (error) throw error;
-      if (data?.settings) {
-        setSettings(data.settings);
-      }
-    } catch (error) {
-      console.error('Ayarlar yüklenirken hata:', error);
-    }
-  };
-
-  const handleKategoriEkle = async () => {
-    if (!yeniKategori.trim()) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([{ name: yeniKategori.trim() }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (addKategori) {
-        addKategori({
-          id: data.id,
-          ad: data.name
-        });
-      }
+  const handleKategoriEkle = () => {
+    if (yeniKategori.trim()) {
+      addKategori({
+        id: Date.now().toString(),
+        ad: yeniKategori.trim()
+      });
       setYeniKategori('');
-    } catch (error) {
-      console.error('Kategori eklenirken hata:', error);
-      alert('Kategori eklenirken bir hata oluştu');
     }
   };
 
   const handleSettingsSave = async () => {
     try {
-      setIsLoading(true);
       const { error } = await supabase
         .from('users')
         .update({ settings })
@@ -111,16 +83,13 @@ const Ayarlar = () => {
       if (error) throw error;
       alert('Ayarlar başarıyla kaydedildi.');
     } catch (error) {
-      console.error('Ayarlar kaydedilirken hata:', error);
-      alert('Ayarlar kaydedilirken bir hata oluştu');
-    } finally {
-      setIsLoading(false);
+      console.error('Ayarlar kaydedilirken hata oluştu:', error);
+      alert('Ayarlar kaydedilirken bir hata oluştu.');
     }
   };
 
   const handleAddUser = async () => {
     try {
-      setIsLoading(true);
       const { data, error } = await supabase
         .rpc('create_new_user', {
           new_username: newUser.username,
@@ -131,14 +100,12 @@ const Ayarlar = () => {
 
       if (error) throw error;
 
-      await loadUsers();
+      await loadUsers(); // Kullanıcı listesini yeniden yükle
       setNewUser({ username: '', password: '', full_name: '', role: 'user' });
       alert('Kullanıcı başarıyla eklendi.');
     } catch (error) {
       console.error('Kullanıcı eklenirken hata:', error);
-      alert('Kullanıcı eklenirken bir hata oluştu');
-    } finally {
-      setIsLoading(false);
+      alert('Kullanıcı eklenirken bir hata oluştu.');
     }
   };
 
@@ -146,7 +113,6 @@ const Ayarlar = () => {
     if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
 
     try {
-      setIsLoading(true);
       const { error } = await supabase
         .from('users')
         .delete()
@@ -154,13 +120,11 @@ const Ayarlar = () => {
 
       if (error) throw error;
 
-      await loadUsers();
+      await loadUsers(); // Kullanıcı listesini yeniden yükle
       alert('Kullanıcı başarıyla silindi.');
     } catch (error) {
       console.error('Kullanıcı silinirken hata:', error);
-      alert('Kullanıcı silinirken bir hata oluştu');
-    } finally {
-      setIsLoading(false);
+      alert('Kullanıcı silinirken bir hata oluştu.');
     }
   };
 
@@ -235,11 +199,10 @@ const Ayarlar = () => {
           </div>
           <button
             onClick={handleAddUser}
-            disabled={isLoading}
-            className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center disabled:opacity-50"
+            className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            {isLoading ? 'Ekleniyor...' : 'Kullanıcı Ekle'}
+            Kullanıcı Ekle
           </button>
         </div>
 
@@ -287,8 +250,7 @@ const Ayarlar = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleDeleteUser(user.id)}
-                      disabled={isLoading}
-                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                      className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
@@ -314,11 +276,10 @@ const Ayarlar = () => {
           />
           <button
             onClick={handleKategoriEkle}
-            disabled={isLoading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-r-lg flex items-center disabled:opacity-50"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-r-lg flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            {isLoading ? 'Ekleniyor...' : 'Ekle'}
+            Ekle
           </button>
         </div>
         
@@ -329,8 +290,7 @@ const Ayarlar = () => {
                 <span className="text-gray-800">{kategori.ad}</span>
                 <button
                   onClick={() => removeKategori(kategori.id)}
-                  disabled={isLoading}
-                  className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                  className="text-red-600 hover:text-red-900"
                 >
                   <Trash2 className="h-5 w-5" />
                 </button>
@@ -405,11 +365,10 @@ const Ayarlar = () => {
         <div className="mt-6 flex justify-end">
           <button
             onClick={handleSettingsSave}
-            disabled={isLoading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center disabled:opacity-50"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
           >
             <Save className="h-5 w-5 mr-2" />
-            {isLoading ? 'Kaydediliyor...' : 'Ayarları Kaydet'}
+            Ayarları Kaydet
           </button>
         </div>
       </div>
