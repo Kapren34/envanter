@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Search, Filter, ArrowDown, ArrowUp, Plus, Edit, Download, Trash2, CheckSquare, Square } from 'lucide-react';
+import { Package, Search, Filter, ArrowDown, ArrowUp, Plus, Edit, Download, Trash2, CheckSquare, Square, Scan } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { exportToExcel } from '../utils/excelUtils';
 import { supabase } from '../lib/supabase';
+import BarcodeScanner from '../components/BarcodeScanner';
 
 const Depo = () => {
   const { urunler } = useEnvanter();
@@ -13,8 +14,8 @@ const Depo = () => {
   const [sortDir, setSortDir] = useState('asc');
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
 
-  // Fetch locations from Supabase
   useEffect(() => {
     const fetchLocations = async () => {
       const { data, error } = await supabase
@@ -32,16 +33,13 @@ const Depo = () => {
     fetchLocations();
   }, []);
 
-  // Get location name by ID
   const getLocationName = (locationId: string) => {
     const location = locations.find(loc => loc.id === locationId);
     return location ? location.name : 'Unknown';
   };
 
-  // Depodaki ürünleri filtrele
   const depodakiUrunler = urunler.filter(urun => urun.durum === 'Depoda');
 
-  // Arama ve kategori filtreleme
   const filteredUrunler = depodakiUrunler.filter((urun) => {
     const matchesSearch = urun.ad.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          urun.barkod.toLowerCase().includes(searchTerm.toLowerCase());
@@ -50,7 +48,6 @@ const Depo = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Sıralama
   const sortedUrunler = [...filteredUrunler].sort((a, b) => {
     if (sortDir === 'asc') {
       return a[sortBy] > b[sortBy] ? 1 : -1;
@@ -59,7 +56,6 @@ const Depo = () => {
     }
   });
 
-  // Sütuna göre sıralama
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -69,7 +65,6 @@ const Depo = () => {
     }
   };
 
-  // Selection handlers
   const toggleSelectAll = () => {
     if (selectedProducts.length === sortedUrunler.length) {
       setSelectedProducts([]);
@@ -86,7 +81,6 @@ const Depo = () => {
     }
   };
 
-  // Export selected products
   const exportSelectedProducts = () => {
     const selectedUrunler = sortedUrunler.filter(urun => selectedProducts.includes(urun.id));
     exportToExcel(
@@ -109,16 +103,24 @@ const Depo = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Depo Durumu</h1>
-        <Link
-          to="/urunler/ekle"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Yeni Ürün Ekle
-        </Link>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShowScanner(true)}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center"
+          >
+            <Scan className="h-5 w-5 mr-2" />
+            Barkod Tara
+          </button>
+          <Link
+            to="/urunler/ekle"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Yeni Ürün Ekle
+          </Link>
+        </div>
       </div>
 
-      {/* İstatistik Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center">
@@ -159,7 +161,6 @@ const Depo = () => {
         </div>
       </div>
 
-      {/* Filtreler */}
       <div className="bg-white p-4 rounded-lg shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -184,13 +185,11 @@ const Depo = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="">Tüm Kategoriler</option>
-              {/* Kategorileri listele */}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Ürün Tablosu */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -317,7 +316,6 @@ const Depo = () => {
         </div>
       </div>
 
-      {/* Seçili Ürünler İçin Aksiyon Butonları */}
       <div className="flex justify-end space-x-4">
         <button
           onClick={exportSelectedProducts}
@@ -332,6 +330,10 @@ const Depo = () => {
           Seçili Ürünleri Dışa Aktar
         </button>
       </div>
+
+      {showScanner && (
+        <BarcodeScanner onClose={() => setShowScanner(false)} />
+      )}
     </div>
   );
 };

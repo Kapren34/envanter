@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut } from 'lucide-react';
+import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
+import BarcodeScanner from '../components/BarcodeScanner';
 import { exportToExcel } from '../utils/excelUtils';
 import { supabase } from '../lib/supabase';
 
@@ -22,8 +23,8 @@ const UrunListesi = () => {
   const [movementDescription, setMovementDescription] = useState('');
   const [movementLocation, setMovementLocation] = useState('');
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
   
-  // Fetch locations from Supabase
   React.useEffect(() => {
     const fetchLocations = async () => {
       const { data, error } = await supabase
@@ -41,13 +42,11 @@ const UrunListesi = () => {
     fetchLocations();
   }, []);
 
-  // Get location name by ID
   const getLocationName = (locationId: string) => {
     const location = locations.find(loc => loc.id === locationId);
     return location ? location.name : 'Unknown';
   };
   
-  // Filtreleme
   const filteredUrunler = urunler.filter((urun) => {
     const matchesSearch = urun.ad.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           urun.barkod.toLowerCase().includes(searchTerm.toLowerCase());
@@ -58,7 +57,6 @@ const UrunListesi = () => {
     return matchesSearch && matchesCategory && matchesStatus && matchesLocation;
   });
 
-  // Sıralama
   const sortedUrunler = [...filteredUrunler].sort((a, b) => {
     if (sortDir === 'asc') {
       return a[sortBy] > b[sortBy] ? 1 : -1;
@@ -67,7 +65,6 @@ const UrunListesi = () => {
     }
   });
   
-  // Sütuna göre sıralama
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -77,12 +74,10 @@ const UrunListesi = () => {
     }
   };
   
-  // Barkod görüntüleme
   const handleBarkodClick = (urunId: string) => {
     setSelectedUrun(urunId);
   };
 
-  // Hareket işlemleri
   const handleMovementClick = (urunId: string, type: 'Giriş' | 'Çıkış') => {
     setSelectedProductForMovement(urunId);
     setMovementType(type);
@@ -118,20 +113,30 @@ const UrunListesi = () => {
     }
   };
   
-  // Konumlar ve durumlar
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Malzeme Takip</h1>
-        <Link to="/urunler/ekle" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
-          <Plus className="h-5 w-5 mr-2" />
-          Yeni Malzeme
-        </Link>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShowScanner(true)}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center"
+          >
+            <Scan className="h-5 w-5 mr-2" />
+            Barkod Tara
+          </button>
+          <Link
+            to="/urunler/ekle"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Yeni Malzeme
+          </Link>
+        </div>
       </div>
       
-      {/* Filtreler */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -217,7 +222,6 @@ const UrunListesi = () => {
         </div>
       </div>
       
-      {/* Ürün Tablosu */}
       <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -355,7 +359,6 @@ const UrunListesi = () => {
         </div>
       </div>
       
-      {/* Dışa Aktar Butonu */}
       <div className="flex justify-end">
         <button 
           onClick={() => exportToExcel(
@@ -378,7 +381,6 @@ const UrunListesi = () => {
         </button>
       </div>
       
-      {/* Barkod Modalı */}
       {selectedUrun && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
@@ -402,7 +404,6 @@ const UrunListesi = () => {
         </div>
       )}
 
-      {/* Hareket Modalı */}
       {showMovementModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
@@ -467,6 +468,10 @@ const UrunListesi = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showScanner && (
+        <BarcodeScanner onClose={() => setShowScanner(false)} />
       )}
     </div>
   );
