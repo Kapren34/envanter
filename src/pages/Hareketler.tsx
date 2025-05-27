@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Filter, Search, Trash2, RefreshCw, ArrowDown, ArrowUp, Download } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
+import { exportToExcel } from '../utils/excelUtils';
+import { supabase } from '../lib/supabase';
 
 const Hareketler = () => {
   const { hareketler, urunler, removeHareket } = useEnvanter();
@@ -11,6 +13,50 @@ const Hareketler = () => {
   const [dateTo, setDateTo] = useState('');
   const [sortBy, setSortBy] = useState('tarih');
   const [sortDir, setSortDir] = useState('desc');
+  const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
+  const [users, setUsers] = useState<{id: string, username: string, full_name: string}[]>([]);
+  
+  // Fetch locations and users from Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch locations
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
+        .select('id, name')
+        .order('name');
+      
+      if (locationsError) {
+        console.error('Error fetching locations:', locationsError);
+      } else if (locationsData) {
+        setLocations(locationsData);
+      }
+
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, username, full_name')
+        .order('username');
+      
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+      } else if (usersData) {
+        setUsers(usersData);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Helper functions to get names
+  const getLocationName = (locationId: string) => {
+    const location = locations.find(loc => loc.id === locationId);
+    return location ? location.name : 'Unknown';
+  };
+
+  const getUserName = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.full_name : 'Unknown';
+  };
   
   // Filtreleme
   const filteredHareketler = hareketler.filter((hareket) => {
@@ -18,7 +64,6 @@ const Hareketler = () => {
                           hareket.aciklama.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType ? hareket.tip === selectedType : true;
     
-    // Tarih filtreleme (Türkçe formattaki tarihleri işlemek için)
     let matchesDateFrom = true;
     let matchesDateTo = true;
     
@@ -41,7 +86,7 @@ const Hareketler = () => {
         parseInt(hareketTarihiParts[0])
       );
       const toDate = new Date(dateTo);
-      toDate.setHours(23, 59, 59, 999); // Günün sonuna ayarla
+      toDate.setHours(23, 59, 59, 999);
       matchesDateTo = hareketTarihi <= toDate;
     }
     
@@ -51,14 +96,12 @@ const Hareketler = () => {
   // Sıralama
   const sortedHareketler = [...filteredHareketler].sort((a, b) => {
     if (sortBy === 'tarih') {
-      // Tarih sıralaması için (GG.AA.YYYY formatı)
       const dateA = a.tarih.split('.').reverse().join('-');
       const dateB = b.tarih.split('.').reverse().join('-');
       return sortDir === 'asc' 
         ? dateA.localeCompare(dateB) 
         : dateB.localeCompare(dateA);
     } else {
-      // Diğer alanlar için normal sıralama
       return sortDir === 'asc'
         ? a[sortBy] > b[sortBy] ? 1 : -1
         : a[sortBy] < b[sortBy] ? 1 : -1;
@@ -214,6 +257,12 @@ const Hareketler = () => {
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
+                  Lokasyon
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
                   Açıklama
                 </th>
                 <th
@@ -222,7 +271,7 @@ const Hareketler = () => {
                   onClick={() => handleSort('kullanici')}
                 >
                   <div className="flex items-center">
-                    Kullanıcı
+                    İşlemi Yapan
                     {sortBy === 'kullanici' && (
                       sortDir === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
                     )}
@@ -256,11 +305,14 @@ const Hareketler = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {hareket.miktar} adet
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getLocationName(hareket.lokasyon)}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                       {hareket.aciklama}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {hareket.kullanici}
+                      {getUserName(hareket.kullanici)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
@@ -274,7 +326,7 @@ const Hareketler = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                  <td colSpan={8} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                     Hareket kaydı bulunamadı
                   </td>
                 </tr>
@@ -286,7 +338,21 @@ const Hareketler = () => {
       
       {/* Dışa Aktar Butonu */}
       <div className="flex justify-end">
-        <button className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150">
+        <button 
+          onClick={() => exportToExcel(
+            sortedHareketler.map(hareket => ({
+              'Tarih': hareket.tarih,
+              'Ürün': hareket.urunAdi,
+              'Tip': hareket.tip,
+              'Miktar': hareket.miktar,
+              'Lokasyon': getLocationName(hareket.lokasyon),
+              'Açıklama': hareket.aciklama,
+              'İşlemi Yapan': getUserName(hareket.kullanici)
+            })),
+            'Hareketler'
+          )}
+          className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150"
+        >
           <Download className="h-5 w-5 mr-2" />
           Excel'e Aktar
         </button>
