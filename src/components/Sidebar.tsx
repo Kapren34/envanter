@@ -47,7 +47,7 @@ const Sidebar = () => {
           }
         >
           <Package className="h-5 w-5 mr-3" />
-          <span>Ürünler</span>
+          <span>Malzeme Takip</span>
         </NavLink>
         <NavLink
           to="/hareketler"
