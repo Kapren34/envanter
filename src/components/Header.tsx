@@ -19,13 +19,6 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
         >
           <Menu className="h-6 w-6 text-gray-700" />
         </button>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Ara..."
-            className="w-64 pl-10 pr-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
-          />
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
         </div>
       </div>
       <div className="flex items-center space-x-4">
