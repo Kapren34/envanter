@@ -4,6 +4,7 @@ import { Save, X, Camera } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { generateBarkod } from '../utils/barkodUtils';
 import { supabase } from '../lib/supabase';
+import React, { useState, useEffect } from 'react';
 
 
 const UrunEkle = () => {
