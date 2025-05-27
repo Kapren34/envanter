@@ -16,16 +16,18 @@ const [kategoriler, setKategoriler] = useState([]);
 useEffect(() => {
   const fetchKategoriler = async () => {
     const { data, error } = await supabase.from('categories').select('*');
+
     if (error) {
       console.error('Kategori çekme hatası:', error);
     } else {
-      console.log('Gelen kategoriler:', data); // Bunu ekle
+      console.log('Fetched categories:', data); // Debug log
       setKategoriler(data);
     }
   };
 
   fetchKategoriler();
 }, []);
+
 
 
   const [formData, setFormData] = useState({
