@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Package, Search, Filter, ArrowDown, ArrowUp, Plus } from 'lucide-react';
-import { useEnvanter } from '../contexts/EnvanterContext';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Package, Search, Filter, ArrowDown, ArrowUp, Plus, Edit, Download } from 'lucide-react';
+import { useEnvanter } from '../contexts/EnvanterContext';
+import { exportToExcel } from '../utils/excelUtils';
+import { supabase } from '../lib/supabase';
 
 const Depo = () => {
   const { urunler } = useEnvanter();
@@ -9,6 +11,31 @@ const Depo = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState('ad');
   const [sortDir, setSortDir] = useState('asc');
+  const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
+
+  // Fetch locations from Supabase
+  useEffect(() => {
+    const fetchLocations = async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching locations:', error);
+      } else if (data) {
+        setLocations(data);
+      }
+    };
+
+    fetchLocations();
+  }, []);
+
+  // Get location name by ID
+  const getLocationName = (locationId: string) => {
+    const location = locations.find(loc => loc.id === locationId);
+    return location ? location.name : 'Unknown';
+  };
 
   // Depodaki ürünleri filtrele
   const depodakiUrunler = urunler.filter(urun => urun.durum === 'Depoda');
@@ -176,6 +203,12 @@ const Depo = () => {
                 >
                   Son İşlem
                 </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  İşlemler
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -210,11 +243,43 @@ const Depo = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {urun.eklemeTarihi}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      to={`/urunler/${urun.id}`}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Excel'e Aktar Butonu */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => exportToExcel(
+            sortedUrunler.map(urun => ({
+              'Ürün Adı': urun.ad,
+              'Marka': urun.marka,
+              'Model': urun.model,
+              'Kategori': urun.kategori,
+              'Durum': urun.durum,
+              'Lokasyon': getLocationName(urun.lokasyon),
+              'Seri No': urun.seriNo,
+              'Barkod': urun.barkod,
+              'Son İşlem': urun.eklemeTarihi
+            })),
+            'Depo_Urunleri'
+          )}
+          className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150"
+        >
+          <Download className="h-5 w-5 mr-2" />
+          Excel'e Aktar
+        </button>
       </div>
     </div>
   );
