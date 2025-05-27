@@ -89,11 +89,13 @@ setIsSubmitting(true);
     }
 
     navigate('/urunler');
-  } catch (error) {
-    console.error('Ürün ekleme hatası:', error);
-    alert('Ürün eklenirken bir hata oluştu.');
-  }
-};
+    } catch (error) {
+      console.error(error);
+      alert('Kaydetme sırasında bir hata oluştu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
 
 
