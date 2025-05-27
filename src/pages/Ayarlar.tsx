@@ -95,8 +95,19 @@ const Ayarlar = () => {
   };
 
   const handleUserSettingsChange = async (changes: Partial<UserSettings>) => {
+    if (!user?.id) {
+      console.error('No user ID available');
+      return;
+    }
+
     try {
-      const { data, error } = await supabase.rpc('update_user_settings', changes);
+      const { error } = await supabase.rpc('update_user_settings', {
+        p_user_id: user.id,
+        p_theme: changes.theme,
+        p_language: changes.language,
+        p_notifications_enabled: changes.notifications_enabled,
+        p_email_notifications: changes.email_notifications
+      });
 
       if (error) throw error;
       setUserSettings({ ...userSettings, ...changes });
