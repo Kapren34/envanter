@@ -102,6 +102,7 @@ const Sidebar = () => {
           <div className="flex items-center text-indigo-200">
             <Monitor className="h-4 w-4 mr-1" />
             <span>Görüntü</span>
+            <span>Desing by YILDIRIM</span>
           </div>
         </div>
       </div>
