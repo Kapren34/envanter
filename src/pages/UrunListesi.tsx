@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download } from 'lucide-react';
+import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import { exportToExcel } from '../utils/excelUtils';
 
 const UrunListesi = () => {
-  const { urunler, kategoriler, removeUrun } = useEnvanter();
+  const { urunler, kategoriler, removeUrun, addHareket } = useEnvanter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -14,6 +14,12 @@ const UrunListesi = () => {
   const [sortBy, setSortBy] = useState('ad');
   const [sortDir, setSortDir] = useState('asc');
   const [selectedUrun, setSelectedUrun] = useState<string | null>(null);
+  const [showMovementModal, setShowMovementModal] = useState(false);
+  const [selectedProductForMovement, setSelectedProductForMovement] = useState<string | null>(null);
+  const [movementType, setMovementType] = useState<'Giriş' | 'Çıkış'>('Çıkış');
+  const [movementQuantity, setMovementQuantity] = useState(1);
+  const [movementDescription, setMovementDescription] = useState('');
+  const [movementLocation, setMovementLocation] = useState('');
   
   // Filtreleme
   const filteredUrunler = urunler.filter((urun) => {
@@ -48,6 +54,42 @@ const UrunListesi = () => {
   // Barkod görüntüleme
   const handleBarkodClick = (urunId: string) => {
     setSelectedUrun(urunId);
+  };
+
+  // Hareket işlemleri
+  const handleMovementClick = (urunId: string, type: 'Giriş' | 'Çıkış') => {
+    setSelectedProductForMovement(urunId);
+    setMovementType(type);
+    setShowMovementModal(true);
+  };
+
+  const handleMovementSubmit = async () => {
+    if (!selectedProductForMovement) return;
+
+    try {
+      await addHareket({
+        id: '',
+        urunId: selectedProductForMovement,
+        urunAdi: urunler.find(u => u.id === selectedProductForMovement)?.ad || '',
+        tip: movementType,
+        miktar: movementQuantity,
+        tarih: new Date().toLocaleDateString('tr-TR'),
+        aciklama: movementDescription,
+        lokasyon: movementLocation,
+        kullanici: 'Admin'
+      });
+
+      setShowMovementModal(false);
+      setSelectedProductForMovement(null);
+      setMovementQuantity(1);
+      setMovementDescription('');
+      setMovementLocation('');
+
+      alert(`Ürün ${movementType.toLowerCase()} kaydı başarıyla oluşturuldu.`);
+    } catch (error) {
+      console.error('Hareket oluşturma hatası:', error);
+      alert('Hareket kaydı oluşturulurken bir hata oluştu.');
+    }
   };
   
   // Konumlar ve durumlar
@@ -265,6 +307,20 @@ const UrunListesi = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleMovementClick(urun.id, 'Çıkış')}
+                          className="text-red-600 hover:text-red-900"
+                          title="Çıkış"
+                        >
+                          <LogOut className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleMovementClick(urun.id, 'Giriş')}
+                          className="text-green-600 hover:text-green-900"
+                          title="Giriş"
+                        >
+                          <LogIn className="h-5 w-5" />
+                        </button>
                         <Link to={`/urunler/${urun.id}`} className="text-indigo-600 hover:text-indigo-900">
                           <Edit className="h-5 w-5" />
                         </Link>
@@ -331,6 +387,73 @@ const UrunListesi = () => {
                 className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
               >
                 Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hareket Modalı */}
+      {showMovementModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Ürün {movementType}i
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Miktar
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={movementQuantity}
+                  onChange={(e) => setMovementQuantity(parseInt(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lokasyon
+                </label>
+                <select
+                  value={movementLocation}
+                  onChange={(e) => setMovementLocation(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                >
+                  <option value="">Lokasyon Seçin</option>
+                  {lokasyonlar.map((lokasyon) => (
+                    <option key={lokasyon} value={lokasyon}>
+                      {lokasyon}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Açıklama
+                </label>
+                <textarea
+                  value={movementDescription}
+                  onChange={(e) => setMovementDescription(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowMovementModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleMovementSubmit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Kaydet
               </button>
             </div>
           </div>
