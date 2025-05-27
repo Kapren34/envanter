@@ -16,7 +16,8 @@ export const checkExistingBarkod = async (supabase: any, name: string, brand: st
       .eq('name', name)
       .eq('brand', brand || '')
       .eq('model', model || '')
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.error('Barkod kontrol hatası:', error);
