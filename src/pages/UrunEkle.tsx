@@ -100,6 +100,36 @@ const UrunEkle = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const generateUniqueBarcode = async () => {
+    let barcode;
+    let isUnique = false;
+    let maxAttempts = 10;
+    let attempts = 0;
+
+    while (!isUnique && attempts < maxAttempts) {
+      barcode = generateBarkod();
+      
+      // Check if barcode exists
+      const { data, error } = await supabase
+        .from('products')
+        .select('barcode')
+        .eq('barcode', barcode)
+        .single();
+
+      if (error && error.code === 'PGRST116') { // no rows returned
+        isUnique = true;
+      } else {
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      throw new Error('Could not generate a unique barcode after multiple attempts');
+    }
+
+    return barcode;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -108,17 +138,25 @@ const UrunEkle = () => {
       let barcode;
       
       if (isDepoProduct) {
-        // For depo products, check existing or generate new barcode
+        // For depo products, first try to get existing barcode
         barcode = await checkExistingBarkod(
           supabase,
           formData.ad,
           formData.marka,
           formData.model
-        ) || generateBarkod();
+        );
+        
+        // If no existing barcode found, generate a unique one
+        if (!barcode) {
+          barcode = await generateUniqueBarcode();
+        }
       } else {
         // For malzeme products, use the same barcode as reference product
         const refProduct = depoProducts.find(p => p.id === formData.referenceProductId);
-        barcode = refProduct?.barcode || generateBarkod();
+        if (!refProduct?.barcode) {
+          throw new Error('Reference product barcode not found');
+        }
+        barcode = refProduct.barcode;
       }
 
       const { data, error } = await supabase
