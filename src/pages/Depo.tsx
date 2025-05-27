@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Search, Filter, ArrowDown, ArrowUp, Plus, Edit, Download } from 'lucide-react';
+import { Package, Search, Filter, ArrowDown, ArrowUp, Plus, Edit, Download, Trash2, CheckSquare, Square } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { exportToExcel } from '../utils/excelUtils';
 import { supabase } from '../lib/supabase';
@@ -12,6 +12,7 @@ const Depo = () => {
   const [sortBy, setSortBy] = useState('ad');
   const [sortDir, setSortDir] = useState('asc');
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Fetch locations from Supabase
   useEffect(() => {
@@ -68,6 +69,42 @@ const Depo = () => {
     }
   };
 
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === sortedUrunler.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(sortedUrunler.map(urun => urun.id));
+    }
+  };
+
+  const toggleSelectProduct = (productId: string) => {
+    if (selectedProducts.includes(productId)) {
+      setSelectedProducts(selectedProducts.filter(id => id !== productId));
+    } else {
+      setSelectedProducts([...selectedProducts, productId]);
+    }
+  };
+
+  // Export selected products
+  const exportSelectedProducts = () => {
+    const selectedUrunler = sortedUrunler.filter(urun => selectedProducts.includes(urun.id));
+    exportToExcel(
+      selectedUrunler.map(urun => ({
+        'Ürün Adı': urun.ad,
+        'Marka': urun.marka,
+        'Model': urun.model,
+        'Kategori': urun.kategori,
+        'Durum': urun.durum,
+        'Lokasyon': getLocationName(urun.lokasyon),
+        'Seri No': urun.seriNo,
+        'Barkod': urun.barkod,
+        'Son İşlem': urun.eklemeTarihi
+      })),
+      'Secili_Depo_Urunleri'
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -101,10 +138,8 @@ const Depo = () => {
               <Package className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-800">Kullanılabilir</h3>
-              <p className="text-2xl font-bold text-green-600">
-                {depodakiUrunler.filter(u => u.durum === 'Depoda').length}
-              </p>
+              <h3 className="text-lg font-semibold text-gray-800">Seçili Ürün</h3>
+              <p className="text-2xl font-bold text-green-600">{selectedProducts.length}</p>
             </div>
           </div>
         </div>
@@ -161,6 +196,18 @@ const Depo = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    {selectedProducts.length === sortedUrunler.length ? (
+                      <CheckSquare className="h-5 w-5" />
+                    ) : (
+                      <Square className="h-5 w-5" />
+                    )}
+                  </button>
+                </th>
                 <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -215,6 +262,18 @@ const Depo = () => {
               {sortedUrunler.map((urun) => (
                 <tr key={urun.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => toggleSelectProduct(urun.id)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      {selectedProducts.includes(urun.id) ? (
+                        <CheckSquare className="h-5 w-5" />
+                      ) : (
+                        <Square className="h-5 w-5" />
+                      )}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
                         <Package className="h-5 w-5 text-gray-500" />
@@ -258,27 +317,19 @@ const Depo = () => {
         </div>
       </div>
 
-      {/* Excel'e Aktar Butonu */}
-      <div className="flex justify-end">
+      {/* Seçili Ürünler İçin Aksiyon Butonları */}
+      <div className="flex justify-end space-x-4">
         <button
-          onClick={() => exportToExcel(
-            sortedUrunler.map(urun => ({
-              'Ürün Adı': urun.ad,
-              'Marka': urun.marka,
-              'Model': urun.model,
-              'Kategori': urun.kategori,
-              'Durum': urun.durum,
-              'Lokasyon': getLocationName(urun.lokasyon),
-              'Seri No': urun.seriNo,
-              'Barkod': urun.barkod,
-              'Son İşlem': urun.eklemeTarihi
-            })),
-            'Depo_Urunleri'
-          )}
-          className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150"
+          onClick={exportSelectedProducts}
+          disabled={selectedProducts.length === 0}
+          className={`flex items-center px-4 py-2 rounded-lg transition duration-150 ${
+            selectedProducts.length === 0
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+          }`}
         >
           <Download className="h-5 w-5 mr-2" />
-          Excel'e Aktar
+          Seçili Ürünleri Dışa Aktar
         </button>
       </div>
     </div>
