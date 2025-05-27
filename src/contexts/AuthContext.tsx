@@ -27,33 +27,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Load user from localStorage on mount (persist login)
+  // On app start, load user + token from localStorage and set supabase auth
   useEffect(() => {
     const storedUser = localStorage.getItem('authUser');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('accessToken');
+
+    if (storedUser && storedToken) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         setIsAuthenticated(true);
+
+        // Set token to supabase client so requests are authenticated
+        supabase.auth.setAuth(storedToken);
       } catch {
         localStorage.removeItem('authUser');
+        localStorage.removeItem('accessToken');
       }
     }
   }, []);
 
   const login = async (username: string, password: string) => {
     try {
-      // Call your custom RPC to verify username/password
       const { data, error } = await supabase.rpc('authenticate_user', {
         p_username: username,
         p_password: password,
       });
-      console.log('RPC data:', data, 'RPC error:', error);
 
       if (error) throw error;
 
       if (data && data.length > 0) {
         const userData = data[0];
+
+        // Assume your RPC returns JWT token as access_token
+        const token = userData.access_token;
+
+        if (!token) throw new Error('No access token received from server');
 
         const userObj: User = {
           id: userData.user_id,
@@ -70,7 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userObj);
         setIsAuthenticated(true);
 
+        // Save user and token in localStorage
         localStorage.setItem('authUser', JSON.stringify(userObj));
+        localStorage.setItem('accessToken', token);
+
+        // Set token for supabase client to authenticate future requests
+        supabase.auth.setAuth(token);
       } else {
         throw new Error('Invalid credentials');
       }
@@ -82,13 +96,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      // You may or may not want to sign out from Supabase Auth,
-      // since you use custom RPC auth, but calling it won't hurt.
       await supabase.auth.signOut();
-
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('authUser');
+      localStorage.removeItem('accessToken');
+      supabase.auth.setAuth(null);
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -112,8 +125,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
