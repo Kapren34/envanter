@@ -51,35 +51,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (identifier: string, password: string) => {
-  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-  let emailToUse = identifier;
+    try {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+      let emailToUse = identifier;
 
-  if (!isEmail) {
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('email')
-      .eq('username', identifier)
-      .single();
+      if (!isEmail) {
+        // If identifier is not an email, try to find the user by username
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('email, password_hash')
+          .eq('username', identifier)
+          .single();
 
-    if (userError) {
-      console.error('Kullanıcı sorgu hatası:', userError);
-      throw new Error('Kullanıcı adı bulunamadı');
+        if (userError || !userData) {
+          throw new Error('Kullanıcı adı bulunamadı');
+        }
+
+        if (!userData.email) {
+          throw new Error('Kullanıcıya ait email bulunamadı');
+        }
+
+        emailToUse = userData.email;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailToUse,
+        password: password
+      });
+
+      if (error) {
+        if (error.message === 'Invalid login credentials') {
+          throw new Error('Geçersiz kullanıcı adı veya şifre');
+        }
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('Giriş başarısız');
+      }
+
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
     }
-
-    if (!userData?.email) {
-      throw new Error('Kullanıcıya ait email bulunamadı');
-    }
-    emailToUse = userData.email;
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
-
-  if (error) {
-    console.error('Supabase giriş hatası:', error);
-    throw new Error('Geçersiz kullanıcı adı veya şifre');
-  }
-};
-
+  };
 
   const logout = async () => {
     await supabase.auth.signOut();
