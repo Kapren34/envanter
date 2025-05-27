@@ -172,7 +172,7 @@ useEffect(() => {
               >
                 Kategori*
               </label>
-              <select
+<select
   id="kategori"
   name="kategori"
   required
@@ -183,10 +183,11 @@ useEffect(() => {
   <option value="">Kategori Seçin</option>
   {kategoriler.map((kategori) => (
     <option key={kategori.id} value={kategori.id}>
-      {kategori.ad}
+      {kategori.name}
     </option>
   ))}
 </select>
+
 
             </div>
           </div>
