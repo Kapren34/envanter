@@ -7,7 +7,7 @@ const Sidebar = () => {
     <div className="flex flex-col h-full text-white">
       <div className="px-4 py-6">
         <h2 className="text-2xl font-bold text-white">POWERSOUND DEPO TAKİP</h2>
-        <p className="text-indigo-200 text-sm">Ses, Işık ve Görüntü Sistemleri</p>
+        <p className="text-indigo-200 text-sm"></p>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1">
         <NavLink
