@@ -4,6 +4,7 @@ import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import { exportToExcel } from '../utils/excelUtils';
+import { supabase } from '../lib/supabase';
 
 const UrunListesi = () => {
   const { urunler, kategoriler, removeUrun, addHareket } = useEnvanter();
@@ -20,6 +21,31 @@ const UrunListesi = () => {
   const [movementQuantity, setMovementQuantity] = useState(1);
   const [movementDescription, setMovementDescription] = useState('');
   const [movementLocation, setMovementLocation] = useState('');
+  const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
+  
+  // Fetch locations from Supabase
+  React.useEffect(() => {
+    const fetchLocations = async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching locations:', error);
+      } else if (data) {
+        setLocations(data);
+      }
+    };
+
+    fetchLocations();
+  }, []);
+
+  // Get location name by ID
+  const getLocationName = (locationId: string) => {
+    const location = locations.find(loc => loc.id === locationId);
+    return location ? location.name : 'Unknown';
+  };
   
   // Filtreleme
   const filteredUrunler = urunler.filter((urun) => {
@@ -93,23 +119,6 @@ const UrunListesi = () => {
   };
   
   // Konumlar ve durumlar
-  const lokasyonlar = [
-    'Depo',
-    'Merit Park',
-    'Merit Royal',
-    'Merit Cristal',
-    'Lord Place',
-    'Kaya Plazzo',
-    'Cratos',
-    'Acapolco',
-    'Elexsus',
-    'Chamada',
-    'Limak',
-    'Kaya Artemis',
-    'Concorde',
-    'Concorde Lefkosa',
-    'Grand Saphire'
-  ];
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
   return (
@@ -179,9 +188,9 @@ const UrunListesi = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="">Tüm Lokasyonlar</option>
-              {lokasyonlar.map((lokasyon) => (
-                <option key={lokasyon} value={lokasyon}>
-                  {lokasyon}
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
                 </option>
               ))}
             </select>
@@ -303,7 +312,7 @@ const UrunListesi = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {urun.lokasyon}
+                      {getLocationName(urun.lokasyon)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
@@ -356,7 +365,7 @@ const UrunListesi = () => {
               'Model': urun.model,
               'Kategori': urun.kategori,
               'Durum': urun.durum,
-              'Lokasyon': urun.lokasyon,
+              'Lokasyon': getLocationName(urun.lokasyon),
               'Seri No': urun.seriNo,
               'Barkod': urun.barkod,
             })),
@@ -423,9 +432,9 @@ const UrunListesi = () => {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 >
                   <option value="">Lokasyon Seçin</option>
-                  {lokasyonlar.map((lokasyon) => (
-                    <option key={lokasyon} value={lokasyon}>
-                      {lokasyon}
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
                     </option>
                   ))}
                 </select>
