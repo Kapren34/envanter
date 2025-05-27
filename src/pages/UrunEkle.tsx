@@ -31,22 +31,27 @@ const UrunEkle = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Yeni barkod oluştur
     const barkod = generateBarkod();
 
-    // Yeni ürün ekle
-    addUrun({
-      ...formData,
-      id: Date.now().toString(),
-      barkod,
-      eklemeTarihi: new Date().toLocaleDateString(),
-    });
+    try {
+      // Yeni ürün ekle
+      await addUrun({
+        ...formData,
+        id: Date.now().toString(),
+        barkod,
+        eklemeTarihi: new Date().toLocaleDateString(),
+      });
 
-    // Ürün listesine dön
-    navigate('/urunler');
+      // Ürün listesine dön
+      navigate('/urunler');
+    } catch (error) {
+      console.error('Ürün ekleme hatası:', error);
+      alert('Ürün eklenirken bir hata oluştu.');
+    }
   };
 
   // Lokasyon ve durum seçenekleri
