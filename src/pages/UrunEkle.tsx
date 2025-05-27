@@ -59,43 +59,33 @@ useEffect(() => {
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
-  const barkod = generateBarkod();
+  const barcode = generateBarkod();
 
   try {
     const { data, error } = await supabase
       .from('products')
       .insert([{
-        ad: formData.ad,
-        marka: formData.marka,
-        model: formData.model,
-        kategori: formData.kategori,
-        durum: formData.durum,
-        lokasyon: formData.lokasyon,
-        seriNo: formData.seriNo,
-        aciklama: formData.aciklama,
-        barkod,
-        eklemeTarihi: new Date().toISOString(), // Tarihi ISO formatta gönderelim
+        barcode,                          // barcode not null
+        name: formData.ad,                // name not null
+        brand: formData.marka || null,   // brand nullable
+        model: formData.model || null,   // model nullable
+        category_id: formData.kategori || null, // category_id uuid nullable
+        serial_number: formData.seriNo || null, // serial_number nullable
+        description: formData.aciklama || null, // description nullable
+        status: formData.durum || 'Depoda',      // status with default 'Depoda'
+        location_id: formData.lokasyon || null,  // location_id uuid nullable (adjust if you have locations table)
+        photo_url: null,                 // photo_url nullable, not handled yet
+        created_by: null,                // you can set current user id here if available
+        // created_at will default to now() in DB
       }]);
 
     if (error) {
       throw error;
     }
 
-    // Eğer addUrun fonksiyonunu da kullanıyorsanız, onu da çağırabilirsiniz
+    // Optionally, add to context or local state
     if (addUrun) {
-      addUrun({
-        id: data[0].id, // Supabase insert sonrası dönen id
-        ad: formData.ad,
-        marka: formData.marka,
-        model: formData.model,
-        kategori: formData.kategori,
-        durum: formData.durum,
-        lokasyon: formData.lokasyon,
-        seriNo: formData.seriNo,
-        aciklama: formData.aciklama,
-        barkod,
-        eklemeTarihi: data[0].eklemeTarihi,
-      });
+      addUrun(data[0]);
     }
 
     navigate('/urunler');
@@ -104,6 +94,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     alert('Ürün eklenirken bir hata oluştu.');
   }
 };
+
 
 
   // Lokasyon ve durum seçenekleri
