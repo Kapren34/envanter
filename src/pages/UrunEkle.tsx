@@ -3,10 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { Save, X, Camera } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { generateBarkod } from '../utils/barkodUtils';
+import { supabase } from '../lib/supabase';
+
 
 const UrunEkle = () => {
   const navigate = useNavigate();
-  const { addUrun, kategoriler } = useEnvanter();
+  const { addUrun } = useEnvanter();
+
+const [kategoriler, setKategoriler] = useState([]);
+
+useEffect(() => {
+  const fetchKategoriler = async () => {
+    const { data, error } = await supabase.from('categories').select('*');
+    if (error) {
+      console.error('Kategori çekme hatası:', error);
+    } else {
+      setKategoriler(data);
+    }
+  };
+
+  fetchKategoriler();
+}, []);
 
   const [formData, setFormData] = useState({
     ad: '',
@@ -153,20 +170,21 @@ const UrunEkle = () => {
                 Kategori*
               </label>
               <select
-                id="kategori"
-                name="kategori"
-                required
-                value={formData.kategori}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">Kategori Seçin</option>
-                {kategoriler.map((kategori) => (
-                  <option key={kategori.id} value={kategori.id}>
-                    {kategori.ad}
-                  </option>
-                ))}
-              </select>
+  id="kategori"
+  name="kategori"
+  required
+  value={formData.kategori}
+  onChange={handleChange}
+  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+>
+  <option value="">Kategori Seçin</option>
+  {kategoriler.map((kategori) => (
+    <option key={kategori.id} value={kategori.id}>
+      {kategori.ad}
+    </option>
+  ))}
+</select>
+
             </div>
           </div>
 
