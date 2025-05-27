@@ -5,7 +5,6 @@ interface User {
   id: string;
   email: string | null;
   role: 'admin' | 'user';
-  name?: string;
 }
 
 interface AuthContextType {
@@ -14,34 +13,33 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session?.user) {
-          await updateUserState(sessionData.session.user.id);
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-      } finally {
-        setIsLoading(false);
+    // Aktif session kontrolü
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setUser({
+          id: data.session.user.id,
+          email: data.session.user.email,
+          role: 'user', // istersen role'u DB'den çekebilirsin
+        });
       }
-    };
+    });
 
-    initAuth();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Auth state değişikliklerini dinle (login, logout, expire)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        await updateUserState(session.user.id);
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          role: 'user', // istersen role'u DB'den çekebilirsin
+        });
       } else {
         setUser(null);
       }
@@ -52,44 +50,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const updateUserState = async (userId: string) => {
-    try {
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('role, full_name, email')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      if (userData) {
-        setUser({
-          id: userId,
-          email: userData.email,
-          role: userData.role as 'admin' | 'user',
-          name: userData.full_name
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setUser(null);
-    }
-  };
-
   const login = async (identifier: string, password: string) => {
     try {
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
       let emailToUse = identifier;
 
       if (!isEmail) {
+        // If identifier is not an email, try to find the user by username
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('email')
+          .select('email, password_hash')
           .eq('username', identifier)
           .single();
 
-        if (userError || !userData?.email) {
+        if (userError || !userData) {
           throw new Error('Kullanıcı adı bulunamadı');
+        }
+
+        if (!userData.email) {
+          throw new Error('Kullanıcıya ait email bulunamadı');
         }
 
         emailToUse = userData.email;
@@ -111,8 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Giriş başarısız');
       }
 
-      await updateUserState(data.user.id);
-
     } catch (error) {
       console.error('Login error:', error);
       throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
@@ -120,12 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await supabase.auth.signOut();
   };
 
   return (
@@ -136,7 +108,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
-        isLoading
       }}
     >
       {children}
