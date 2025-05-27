@@ -19,12 +19,14 @@ useEffect(() => {
     if (error) {
       console.error('Kategori çekme hatası:', error);
     } else {
+      console.log('Gelen kategoriler:', data); // Bunu ekle
       setKategoriler(data);
     }
   };
 
   fetchKategoriler();
 }, []);
+
 
   const [formData, setFormData] = useState({
     ad: '',
