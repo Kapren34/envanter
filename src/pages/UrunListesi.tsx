@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan } from 'lucide-react';
+import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan, CheckSquare, Square } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import BarcodeScanner from '../components/BarcodeScanner';
@@ -24,6 +24,7 @@ const UrunListesi = () => {
   const [movementLocation, setMovementLocation] = useState('');
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
   React.useEffect(() => {
     const fetchLocations = async () => {
@@ -111,6 +112,39 @@ const UrunListesi = () => {
       console.error('Hareket oluşturma hatası:', error);
       alert('Hareket kaydı oluşturulurken bir hata oluştu.');
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === sortedUrunler.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(sortedUrunler.map(urun => urun.id));
+    }
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    if (selectedProducts.includes(productId)) {
+      setSelectedProducts(selectedProducts.filter(id => id !== productId));
+    } else {
+      setSelectedProducts([...selectedProducts, productId]);
+    }
+  };
+
+  const exportSelectedProducts = () => {
+    const productsToExport = sortedUrunler.filter(urun => selectedProducts.includes(urun.id));
+    exportToExcel(
+      productsToExport.map(urun => ({
+        'Ürün Adı': urun.ad,
+        'Marka': urun.marka,
+        'Model': urun.model,
+        'Kategori': urun.kategori,
+        'Durum': urun.durum,
+        'Lokasyon': getLocationName(urun.lokasyon),
+        'Seri No': urun.seriNo,
+        'Barkod': urun.barkod,
+      })),
+      'Secili_Urunler'
+    );
   };
   
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
@@ -206,6 +240,11 @@ const UrunListesi = () => {
           <div className="flex items-center text-gray-700">
             <Filter className="h-5 w-5 mr-2" />
             <span className="text-sm">{filteredUrunler.length} ürün filtrelendi</span>
+            {selectedProducts.length > 0 && (
+              <span className="ml-2 text-sm text-indigo-600">
+                ({selectedProducts.length} ürün seçili)
+              </span>
+            )}
           </div>
           
           <button
@@ -214,6 +253,7 @@ const UrunListesi = () => {
               setSelectedCategory('');
               setSelectedStatus('');
               setSelectedLocation('');
+              setSelectedProducts([]);
             }}
             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
           >
@@ -227,6 +267,18 @@ const UrunListesi = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    {selectedProducts.length === sortedUrunler.length ? (
+                      <CheckSquare className="h-5 w-5" />
+                    ) : (
+                      <Square className="h-5 w-5" />
+                    )}
+                  </button>
+                </th>
                 <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -290,6 +342,18 @@ const UrunListesi = () => {
               {sortedUrunler.length > 0 ? (
                 sortedUrunler.map((urun) => (
                   <tr key={urun.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => toggleProductSelection(urun.id)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        {selectedProducts.includes(urun.id) ? (
+                          <CheckSquare className="h-5 w-5" />
+                        ) : (
+                          <Square className="h-5 w-5" />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{urun.ad}</div>
                       <div className="text-sm text-gray-500">{urun.marka} {urun.model}</div>
@@ -359,7 +423,16 @@ const UrunListesi = () => {
         </div>
       </div>
       
-      <div className="flex justify-end">
+      <div className="flex justify-end space-x-4">
+        {selectedProducts.length > 0 && (
+          <button 
+            onClick={exportSelectedProducts}
+            className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150"
+          >
+            <Download className="h-5 w-5 mr-2" />
+            Seçili Ürünleri Dışa Aktar ({selectedProducts.length})
+          </button>
+        )}
         <button 
           onClick={() => exportToExcel(
             sortedUrunler.map(urun => ({
@@ -377,7 +450,7 @@ const UrunListesi = () => {
           className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition duration-150"
         >
           <Download className="h-5 w-5 mr-2" />
-          Excel'e Aktar
+          Tümünü Dışa Aktar
         </button>
       </div>
       
