@@ -53,46 +53,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
   }, []);
 
-  const login = async (username: string, password: string) => {
-    try {
-      const { data, error } = await supabase.rpc('authenticate_user', {
-  p_username: username,
-  p_password: password
-});
-console.log('RPC data:', data, 'RPC error:', error);
+ const login = async (username: string, password: string) => {
+  try {
+    const { data, error } = await supabase.rpc('authenticate_user', {
+      p_username: username,
+      p_password: password,
+    });
+    console.log('RPC data:', data, 'RPC error:', error);
 
+    if (error) throw error;
 
-      if (error) throw error;
+    if (data && data.length > 0) {
+      const userData = data[0];
 
-      if (data && data.length > 0) {
-        const userData = data[0];
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: `${username}@example.com`,
-          password: password
-        });
+      // Set user state directly from RPC response (no Supabase Auth signIn)
+      setUser({
+        id: userData.user_id,
+        name: username,
+        role: userData.role,
+        settings: {
+          company_name: 'POWERSOUND',
+          low_stock_limit: 5,
+          email_notifications: false,
+          auto_backup: true,
+        },
+      });
+      setIsAuthenticated(true);
 
-        if (authError) throw authError;
-
-        setUser({
-          id: userData.user_id,
-          name: username,
-          role: userData.role,
-          settings: {
-            company_name: 'POWERSOUND',
-            low_stock_limit: 5,
-            email_notifications: false,
-            auto_backup: true
-          }
-        });
-        setIsAuthenticated(true);
-      } else {
-        throw new Error('Invalid credentials');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+      // Optionally save session info locally so user stays logged in after reload
+      localStorage.setItem('authUser', JSON.stringify({
+        id: userData.user_id,
+        name: username,
+        role: userData.role,
+        settings: {
+          company_name: 'POWERSOUND',
+          low_stock_limit: 5,
+          email_notifications: false,
+          auto_backup: true,
+        },
+      }));
+    } else {
+      throw new Error('Invalid credentials');
     }
-  };
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+};
+
 
   const logout = async () => {
     try {
