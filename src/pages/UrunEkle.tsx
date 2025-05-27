@@ -328,12 +328,15 @@ const handleSubmit = async (e: React.FormEvent) => {
             İptal
           </button>
           <button
-            type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
-          >
-            <Save className="h-5 w-5 mr-2" />
-            Kaydet
-          </button>
+        type="submit"
+        disabled={isSubmitting}
+        className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        <Save className="h-5 w-5 mr-2" />
+        {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+      </button>
         </div>
       </form>
     </div>
