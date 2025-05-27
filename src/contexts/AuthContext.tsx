@@ -20,47 +20,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check active session
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.user) {
-        // Get user role from users table
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('role, full_name')
-          .eq('id', data.session.user.id)
-          .single();
-
-        if (!error && userData) {
-          setUser({
-            id: data.session.user.id,
-            email: data.session.user.email,
-            role: userData.role as 'admin' | 'user',
-            name: userData.full_name
-          });
-        }
+        await updateUserState(data.session.user.id);
       }
+      setIsLoading(false);
     });
 
     // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        // Get user role from users table
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('role, full_name')
-          .eq('id', session.user.id)
-          .single();
-
-        if (!error && userData) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email,
-            role: userData.role as 'admin' | 'user',
-            name: userData.full_name
-          });
-        }
+        await updateUserState(session.user.id);
       } else {
         setUser(null);
       }
@@ -71,30 +45,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const updateUserState = async (userId: string) => {
+    try {
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('role, full_name, email')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (userData) {
+        setUser({
+          id: userId,
+          email: userData.email,
+          role: userData.role as 'admin' | 'user',
+          name: userData.full_name
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setUser(null);
+    }
+  };
+
   const login = async (identifier: string, password: string) => {
     try {
+      setIsLoading(true);
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
       let emailToUse = identifier;
 
       if (!isEmail) {
-        // If identifier is not an email, try to find the user by username
+        // If identifier is not an email, find the user by username
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('email, password_hash')
+          .select('email')
           .eq('username', identifier)
           .single();
 
-        if (userError || !userData) {
+        if (userError || !userData?.email) {
           throw new Error('Kullanıcı adı bulunamadı');
-        }
-
-        if (!userData.email) {
-          throw new Error('Kullanıcıya ait email bulunamadı');
         }
 
         emailToUse = userData.email;
       }
 
+      // Attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email: emailToUse,
         password: password
@@ -111,15 +107,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Giriş başarısız');
       }
 
+      // Update user state with the new session
+      await updateUserState(data.user.id);
+
     } catch (error) {
       console.error('Login error:', error);
       throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <AuthContext.Provider
