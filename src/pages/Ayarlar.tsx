@@ -30,7 +30,7 @@ interface SystemSettings {
 }
 
 const Ayarlar = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [userSettings, setUserSettings] = useState<UserSettings>({
     theme: 'light',
     language: 'tr',
@@ -56,21 +56,9 @@ const Ayarlar = () => {
     }
   });
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [newUser, setNewUser] = useState({
-    username: '',
-    email: '',
-    full_name: '',
-    password: '',
-    role: 'user'
-  });
-
   useEffect(() => {
     loadSettings();
-    if (isAdmin) {
-      loadUsers();
-    }
-  }, [isAdmin]);
+  }, []);
 
   const loadSettings = async () => {
     try {
@@ -87,38 +75,22 @@ const Ayarlar = () => {
         setUserSettings(userSettingsData);
       }
 
-      // Load system settings if admin
-      if (isAdmin) {
-        const { data: systemSettingsData, error: systemSettingsError } = await supabase
-          .from('system_settings')
-          .select('*');
+      // Load system settings
+      const { data: systemSettingsData, error: systemSettingsError } = await supabase
+        .from('system_settings')
+        .select('*');
 
-        if (systemSettingsError) {
-          console.error('Error loading system settings:', systemSettingsError);
-        } else if (systemSettingsData) {
-          const settings = systemSettingsData.reduce((acc, curr) => {
-            acc[curr.key] = curr.value;
-            return acc;
-          }, {});
-          setSystemSettings(settings as SystemSettings);
-        }
+      if (systemSettingsError) {
+        console.error('Error loading system settings:', systemSettingsError);
+      } else if (systemSettingsData) {
+        const settings = systemSettingsData.reduce((acc, curr) => {
+          acc[curr.key] = curr.value;
+          return acc;
+        }, {});
+        setSystemSettings(settings as SystemSettings);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
     }
   };
 
@@ -151,89 +123,10 @@ const Ayarlar = () => {
     }
   };
 
-  const handleAddUser = async () => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            full_name: newUser.full_name,
-            role: newUser.role
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      // Create user record in public schema
-      const { error: userError } = await supabase
-        .from('users')
-        .insert([{
-          id: data.user?.id,
-          email: newUser.email,
-          username: newUser.username,
-          full_name: newUser.full_name,
-          role: newUser.role
-        }]);
-
-      if (userError) throw userError;
-
-      loadUsers();
-      setNewUser({
-        username: '',
-        email: '',
-        full_name: '',
-        password: '',
-        role: 'user'
-      });
-      alert('Kullanıcı başarıyla eklendi');
-    } catch (error) {
-      console.error('Error adding user:', error);
-      alert('Kullanıcı eklenirken bir hata oluştu');
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId);
-
-      if (error) throw error;
-      loadUsers();
-      alert('Kullanıcı başarıyla silindi');
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('Kullanıcı silinirken bir hata oluştu');
-    }
-  };
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-100 max-w-md">
-          <Shield className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-yellow-800 mb-2">Yetkisiz Erişim</h2>
-          <p className="text-yellow-700">
-            Bu sayfadaki ayarları görüntülemek ve değiştirmek için yönetici yetkisine sahip olmanız gerekmektedir.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Sistem Ayarları</h1>
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <Shield className="h-4 w-4" />
-          <span>Admin Paneli</span>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-800">Ayarlar</h1>
       </div>
 
       {/* Kullanıcı Ayarları */}
@@ -417,129 +310,6 @@ const Ayarlar = () => {
               <span className="ml-2 text-sm text-gray-700">Otomatik Yedekleme</span>
             </label>
           </div>
-        </div>
-      </div>
-
-      {/* Kullanıcı Yönetimi */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <UserPlus className="h-5 w-5 mr-2 text-indigo-600" />
-          Kullanıcı Yönetimi
-        </h2>
-
-        {/* Yeni Kullanıcı Formu */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Kullanıcı Ekle</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <input
-                type="text"
-                placeholder="Kullanıcı adı"
-                value={newUser.username}
-                onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <input
-                type="email"
-                placeholder="E-posta"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Şifre"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <input
-                type="text"
-                placeholder="Ad Soyad"
-                value={newUser.full_name}
-                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <select
-                value={newUser.role}
-                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="user">Kullanıcı</option>
-                <option value="admin">Yönetici</option>
-              </select>
-            </div>
-          </div>
-          <button
-            onClick={handleAddUser}
-            className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Kullanıcı Ekle
-          </button>
-        </div>
-
-        {/* Kullanıcı Listesi */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kullanıcı Adı
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ad Soyad
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  E-posta
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rol
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  İşlemler
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.full_name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
