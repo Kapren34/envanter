@@ -38,7 +38,7 @@ const Anasayfa = () => {
       <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 rounded-2xl text-white p-8 shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
         <div className="relative z-10">
           <h1 className="text-4xl font-bold mb-2 animate-fade-in">Hoş Geldiniz</h1>
-          <p className="text-indigo-100 mb-8 text-lg animate-fade-in-delay">Cyprus PowerSound Depo Yönetimi</p>
+          <p className="text-indigo-100 mb-8 text-lg animate-fade-in-delay"></p>
           <div className="flex flex-wrap gap-4">
             <Link
               to="/urunler/ekle"
