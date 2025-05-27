@@ -1,46 +1,112 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Shield, Settings as SettingsIcon, UserPlus, Key } from 'lucide-react';
+import { Save, Plus, Trash2, Shield, Settings as SettingsIcon, UserPlus } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-interface User {
-  id: string;
-  username: string;
-  full_name: string;
-  role: string;
-  created_at: string;
-  settings?: {
-    company_name: string;
-    low_stock_limit: number;
-    email_notifications: boolean;
+interface UserSettings {
+  theme: string;
+  language: string;
+  notifications_enabled: boolean;
+  email_notifications: boolean;
+}
+
+interface SystemSettings {
+  company: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+  };
+  inventory: {
+    low_stock_threshold: number;
+    enable_notifications: boolean;
     auto_backup: boolean;
+  };
+  notifications: {
+    email_enabled: boolean;
+    push_enabled: boolean;
   };
 }
 
 const Ayarlar = () => {
-  const { kategoriler, addKategori, removeKategori } = useEnvanter();
   const { user, isAdmin } = useAuth();
-  const [yeniKategori, setYeniKategori] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
+  const [userSettings, setUserSettings] = useState<UserSettings>({
+    theme: 'light',
+    language: 'tr',
+    notifications_enabled: true,
+    email_notifications: true
+  });
+
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>({
+    company: {
+      name: 'POWERSOUND',
+      address: '',
+      phone: '',
+      email: ''
+    },
+    inventory: {
+      low_stock_threshold: 5,
+      enable_notifications: true,
+      auto_backup: true
+    },
+    notifications: {
+      email_enabled: true,
+      push_enabled: false
+    }
+  });
+
+  const [users, setUsers] = useState<any[]>([]);
   const [newUser, setNewUser] = useState({
     username: '',
-    password: '',
+    email: '',
     full_name: '',
+    password: '',
     role: 'user'
-  });
-  const [settings, setSettings] = useState(user?.settings || {
-    company_name: 'POWERSOUND',
-    low_stock_limit: 5,
-    email_notifications: false,
-    auto_backup: true
   });
 
   useEffect(() => {
+    loadSettings();
     if (isAdmin) {
       loadUsers();
     }
   }, [isAdmin]);
+
+  const loadSettings = async () => {
+    try {
+      // Load user settings
+      const { data: userSettingsData, error: userSettingsError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (userSettingsError) {
+        console.error('Error loading user settings:', userSettingsError);
+      } else if (userSettingsData) {
+        setUserSettings(userSettingsData);
+      }
+
+      // Load system settings if admin
+      if (isAdmin) {
+        const { data: systemSettingsData, error: systemSettingsError } = await supabase
+          .from('system_settings')
+          .select('*');
+
+        if (systemSettingsError) {
+          console.error('Error loading system settings:', systemSettingsError);
+        } else if (systemSettingsData) {
+          const settings = systemSettingsData.reduce((acc, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+          }, {});
+          setSystemSettings(settings as SystemSettings);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -49,63 +115,82 @@ const Ayarlar = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Kullanıcılar yüklenirken hata:', error);
-        return;
-      }
-
-      if (data) {
-        console.log('Yüklenen kullanıcılar:', data);
-        setUsers(data);
-      }
+      if (error) throw error;
+      setUsers(data || []);
     } catch (error) {
-      console.error('Kullanıcılar yüklenirken hata:', error);
+      console.error('Error loading users:', error);
     }
   };
 
-  const handleKategoriEkle = () => {
-    if (yeniKategori.trim()) {
-      addKategori({
-        id: Date.now().toString(),
-        ad: yeniKategori.trim()
-      });
-      setYeniKategori('');
-    }
-  };
-
-  const handleSettingsSave = async () => {
+  const handleUserSettingsChange = async (changes: Partial<UserSettings>) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ settings })
-        .eq('id', user?.id);
+      const { data, error } = await supabase.rpc('update_user_settings', changes);
 
       if (error) throw error;
-      alert('Ayarlar başarıyla kaydedildi.');
+      setUserSettings({ ...userSettings, ...changes });
+      alert('Kullanıcı ayarları güncellendi');
     } catch (error) {
-      console.error('Ayarlar kaydedilirken hata oluştu:', error);
-      alert('Ayarlar kaydedilirken bir hata oluştu.');
+      console.error('Error updating user settings:', error);
+      alert('Ayarlar güncellenirken bir hata oluştu');
+    }
+  };
+
+  const handleSystemSettingsChange = async (key: string, value: any) => {
+    try {
+      const { data, error } = await supabase.rpc('update_system_settings', {
+        p_key: key,
+        p_value: value
+      });
+
+      if (error) throw error;
+      setSystemSettings({ ...systemSettings, [key]: value });
+      alert('Sistem ayarları güncellendi');
+    } catch (error) {
+      console.error('Error updating system settings:', error);
+      alert('Sistem ayarları güncellenirken bir hata oluştu');
     }
   };
 
   const handleAddUser = async () => {
     try {
-      const { data, error } = await supabase
-        .rpc('create_new_user', {
-          new_username: newUser.username,
-          new_password: newUser.password,
-          new_full_name: newUser.full_name,
-          new_role: newUser.role
-        });
+      const { data, error } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: {
+            full_name: newUser.full_name,
+            role: newUser.role
+          }
+        }
+      });
 
       if (error) throw error;
 
-      await loadUsers(); // Kullanıcı listesini yeniden yükle
-      setNewUser({ username: '', password: '', full_name: '', role: 'user' });
-      alert('Kullanıcı başarıyla eklendi.');
+      // Create user record in public schema
+      const { error: userError } = await supabase
+        .from('users')
+        .insert([{
+          id: data.user?.id,
+          email: newUser.email,
+          username: newUser.username,
+          full_name: newUser.full_name,
+          role: newUser.role
+        }]);
+
+      if (userError) throw userError;
+
+      loadUsers();
+      setNewUser({
+        username: '',
+        email: '',
+        full_name: '',
+        password: '',
+        role: 'user'
+      });
+      alert('Kullanıcı başarıyla eklendi');
     } catch (error) {
-      console.error('Kullanıcı eklenirken hata:', error);
-      alert('Kullanıcı eklenirken bir hata oluştu.');
+      console.error('Error adding user:', error);
+      alert('Kullanıcı eklenirken bir hata oluştu');
     }
   };
 
@@ -119,12 +204,11 @@ const Ayarlar = () => {
         .eq('id', userId);
 
       if (error) throw error;
-
-      await loadUsers(); // Kullanıcı listesini yeniden yükle
-      alert('Kullanıcı başarıyla silindi.');
+      loadUsers();
+      alert('Kullanıcı başarıyla silindi');
     } catch (error) {
-      console.error('Kullanıcı silinirken hata:', error);
-      alert('Kullanıcı silinirken bir hata oluştu.');
+      console.error('Error deleting user:', error);
+      alert('Kullanıcı silinirken bir hata oluştu');
     }
   };
 
@@ -152,6 +236,190 @@ const Ayarlar = () => {
         </div>
       </div>
 
+      {/* Kullanıcı Ayarları */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          <SettingsIcon className="h-5 w-5 mr-2 text-indigo-600" />
+          Kullanıcı Ayarları
+        </h2>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tema
+              </label>
+              <select
+                value={userSettings.theme}
+                onChange={(e) => handleUserSettingsChange({ theme: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              >
+                <option value="light">Açık Tema</option>
+                <option value="dark">Koyu Tema</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dil
+              </label>
+              <select
+                value={userSettings.language}
+                onChange={(e) => handleUserSettingsChange({ language: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              >
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={userSettings.notifications_enabled}
+                onChange={(e) => handleUserSettingsChange({ notifications_enabled: e.target.checked })}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Bildirimleri Etkinleştir</span>
+            </label>
+
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={userSettings.email_notifications}
+                onChange={(e) => handleUserSettingsChange({ email_notifications: e.target.checked })}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">E-posta Bildirimleri</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Sistem Ayarları */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Şirket Bilgileri
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Şirket Adı
+            </label>
+            <input
+              type="text"
+              value={systemSettings.company.name}
+              onChange={(e) => handleSystemSettingsChange('company', {
+                ...systemSettings.company,
+                name: e.target.value
+              })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              E-posta
+            </label>
+            <input
+              type="email"
+              value={systemSettings.company.email}
+              onChange={(e) => handleSystemSettingsChange('company', {
+                ...systemSettings.company,
+                email: e.target.value
+              })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Telefon
+            </label>
+            <input
+              type="tel"
+              value={systemSettings.company.phone}
+              onChange={(e) => handleSystemSettingsChange('company', {
+                ...systemSettings.company,
+                phone: e.target.value
+              })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Adres
+            </label>
+            <input
+              type="text"
+              value={systemSettings.company.address}
+              onChange={(e) => handleSystemSettingsChange('company', {
+                ...systemSettings.company,
+                address: e.target.value
+              })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Envanter Ayarları */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Envanter Ayarları
+        </h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Düşük Stok Uyarı Limiti
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={systemSettings.inventory.low_stock_threshold}
+              onChange={(e) => handleSystemSettingsChange('inventory', {
+                ...systemSettings.inventory,
+                low_stock_threshold: parseInt(e.target.value)
+              })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={systemSettings.inventory.enable_notifications}
+                onChange={(e) => handleSystemSettingsChange('inventory', {
+                  ...systemSettings.inventory,
+                  enable_notifications: e.target.checked
+                })}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Stok Bildirimlerini Etkinleştir</span>
+            </label>
+
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={systemSettings.inventory.auto_backup}
+                onChange={(e) => handleSystemSettingsChange('inventory', {
+                  ...systemSettings.inventory,
+                  auto_backup: e.target.checked
+                })}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">Otomatik Yedekleme</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       {/* Kullanıcı Yönetimi */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -163,7 +431,7 @@ const Ayarlar = () => {
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Kullanıcı Ekle</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
+            <div>
               <input
                 type="text"
                 placeholder="Kullanıcı adı"
@@ -171,6 +439,17 @@ const Ayarlar = () => {
                 onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
               />
+            </div>
+            <div>
+              <input
+                type="email"
+                placeholder="E-posta"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              />
+            </div>
+            <div>
               <input
                 type="password"
                 placeholder="Şifre"
@@ -179,7 +458,7 @@ const Ayarlar = () => {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
               />
             </div>
-            <div className="space-y-4">
+            <div>
               <input
                 type="text"
                 placeholder="Ad Soyad"
@@ -187,6 +466,8 @@ const Ayarlar = () => {
                 onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
               />
+            </div>
+            <div className="md:col-span-2">
               <select
                 value={newUser.role}
                 onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -218,10 +499,10 @@ const Ayarlar = () => {
                   Ad Soyad
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rol
+                  E-posta
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kayıt Tarihi
+                  Rol
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   İşlemler
@@ -238,14 +519,14 @@ const Ayarlar = () => {
                     <div className="text-sm text-gray-900">{user.full_name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    <div className="text-sm text-gray-500">{user.email}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       user.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'
                     }`}>
                       {user.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.created_at).toLocaleDateString('tr-TR')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
@@ -260,123 +541,6 @@ const Ayarlar = () => {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Kategoriler */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Kategori Yönetimi</h2>
-        
-        <div className="flex mb-4">
-          <input
-            type="text"
-            placeholder="Yeni kategori adı..."
-            value={yeniKategori}
-            onChange={(e) => setYeniKategori(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          <button
-            onClick={handleKategoriEkle}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-r-lg flex items-center"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Ekle
-          </button>
-        </div>
-        
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {kategoriler.length > 0 ? (
-            kategoriler.map((kategori) => (
-              <div key={kategori.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-800">{kategori.ad}</span>
-                <button
-                  onClick={() => removeKategori(kategori.id)}
-                  className="text-red-600 hover:text-red-900"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500 text-center py-4">Henüz kategori bulunmamaktadır.</p>
-          )}
-        </div>
-      </div>
-      
-      {/* Sistem Ayarları */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <SettingsIcon className="h-5 w-5 mr-2 text-indigo-600" />
-          Sistem Ayarları
-        </h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Şirket Adı
-            </label>
-            <input
-              type="text"
-              value={settings.company_name}
-              onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Düşük Stok Uyarı Limiti
-            </label>
-            <input
-              type="number"
-              value={settings.low_stock_limit}
-              onChange={(e) => setSettings({ ...settings, low_stock_limit: parseInt(e.target.value) })}
-              min="1"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="emailNotifications"
-              checked={settings.email_notifications}
-              onChange={(e) => setSettings({ ...settings, email_notifications: e.target.checked })}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor="emailNotifications" className="ml-2 block text-sm text-gray-700">
-              E-posta bildirimlerini etkinleştir
-            </label>
-          </div>
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="autoBackup"
-              checked={settings.auto_backup}
-              onChange={(e) => setSettings({ ...settings, auto_backup: e.target.checked })}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor="autoBackup" className="ml-2 block text-sm text-gray-700">
-              Otomatik yedeklemeyi etkinleştir
-            </label>
-          </div>
-        </div>
-        
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={handleSettingsSave}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
-          >
-            <Save className="h-5 w-5 mr-2" />
-            Ayarları Kaydet
-          </button>
-        </div>
-      </div>
-      
-      {/* Versiyon Bilgisi */}
-      <div className="text-center text-gray-500 text-sm">
-        <p>POWERSOUND DEPO TAKİP v1.0.0</p>
-        <p>© 2025 Tüm Hakları Saklıdır</p>
       </div>
     </div>
   );
