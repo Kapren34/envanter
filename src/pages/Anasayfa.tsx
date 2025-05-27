@@ -32,7 +32,7 @@ const Anasayfa = () => {
       {/* Hoş Geldiniz Banner */}
       <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-white p-8">
         <h1 className="text-3xl font-bold mb-2">Hoş Geldiniz</h1>
-        <p className="text-indigo-100 mb-6">Ses, Işık ve Görüntü Sistemleri Envanter Yönetimi</p>
+        <p className="text-indigo-100 mb-6">Cyprus PowerSound Depo Yönetimi</p>
         <div className="flex flex-wrap gap-4">
           <Link
             to="/urunler/ekle"
