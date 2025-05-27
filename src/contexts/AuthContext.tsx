@@ -51,29 +51,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (identifier: string, password: string) => {
-    // Basit email kontrolü (regex)
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-    let emailToUse = identifier;
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+  let emailToUse = identifier;
 
-    if (!isEmail) {
-      // Email değilse username olarak varsay, email'ini DB'den çek
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('username', identifier)
-        .single();
+  if (!isEmail) {
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('username', identifier)
+      .single();
 
-      if (userError || !userData?.email) {
-        throw new Error('Kullanıcı adı bulunamadı');
-      }
-      emailToUse = userData.email;
+    if (userError) {
+      console.error('Kullanıcı sorgu hatası:', userError);
+      throw new Error('Kullanıcı adı bulunamadı');
     }
 
-    // Email ve şifre ile giriş yap
-    const { error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
-    if (error) throw error;
-    // Kullanıcı set işlemi onAuthStateChange ile otomatik yapılacak
-  };
+    if (!userData?.email) {
+      throw new Error('Kullanıcıya ait email bulunamadı');
+    }
+    emailToUse = userData.email;
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
+
+  if (error) {
+    console.error('Supabase giriş hatası:', error);
+    throw new Error('Geçersiz kullanıcı adı veya şifre');
+  }
+};
+
 
   const logout = async () => {
     await supabase.auth.signOut();
