@@ -24,7 +24,6 @@ const Login = () => {
       await login(username, password);
       navigate('/');
     } catch (err: any) {
-      console.error('Login error:', err);
       setError(err.message || 'Giriş yapılırken bir hata oluştu');
     } finally {
       setIsLoading(false);
