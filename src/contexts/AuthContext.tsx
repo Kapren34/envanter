@@ -14,6 +14,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,15 +24,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session?.user) {
-        await updateUserState(data.session.user.id);
+    const initAuth = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session?.user) {
+          await updateUserState(sessionData.session.user.id);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
 
-    // Listen for auth state changes
+    initAuth();
+
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         await updateUserState(session.user.id);
@@ -71,12 +78,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string) => {
     try {
-      setIsLoading(true);
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
       let emailToUse = identifier;
 
       if (!isEmail) {
-        // If identifier is not an email, find the user by username
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('email')
@@ -90,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         emailToUse = userData.email;
       }
 
-      // Attempt to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email: emailToUse,
         password: password
@@ -107,14 +111,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Giriş başarısız');
       }
 
-      // Update user state with the new session
       await updateUserState(data.user.id);
 
     } catch (error) {
       console.error('Login error:', error);
       throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -127,10 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  if (isLoading) {
-    return null; // Or a loading spinner
-  }
-
   return (
     <AuthContext.Provider
       value={{
@@ -139,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
+        isLoading
       }}
     >
       {children}
