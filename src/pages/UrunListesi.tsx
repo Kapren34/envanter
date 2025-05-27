@@ -4,6 +4,7 @@ import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import { exportToExcel } from '../utils/excelUtils';
+import { supabase } from '../lib/supabase';
 
 const UrunListesi = () => {
   const { urunler, kategoriler, removeUrun, addHareket } = useEnvanter();
@@ -21,6 +22,25 @@ const UrunListesi = () => {
   const [movementDescription, setMovementDescription] = useState('');
   const [movementLocation, setMovementLocation] = useState('');
   
+  useEffect(() => {
+    const fetchUrunler = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching products:', error);
+        return;
+      }
+
+      if (data) {
+        setUrunler(data);
+      }
+    };
+
+    fetchUrunler();
+  }, []);
+
   // Filtreleme
   const filteredUrunler = urunler.filter((urun) => {
     const matchesSearch = urun.ad.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -31,18 +51,6 @@ const UrunListesi = () => {
     
     return matchesSearch && matchesCategory && matchesStatus && matchesLocation;
   });
-  useEffect(() => {
-  const fetchUrunler = async () => {
-    const snapshot = await getDocs(collection(db, 'urunler'));
-    const data = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setUrunler(data);
-  };
-
-  fetchUrunler();
-}, []);
 
   // Sıralama
   const sortedUrunler = [...filteredUrunler].sort((a, b) => {
