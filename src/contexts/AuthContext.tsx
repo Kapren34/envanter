@@ -56,9 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string) => {
     try {
       const { data, error } = await supabase.rpc('authenticate_user', {
-        p_username: username,
-        p_password: password
-      });
+  p_username: username,
+  p_password: password
+});
+console.log('RPC data:', data, 'RPC error:', error);
+
 
       if (error) throw error;
 
