@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Save, X, Camera } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import { generateBarkod, checkExistingBarkod } from '../utils/barkodUtils';
@@ -7,38 +7,62 @@ import React, { useState, useEffect } from 'react';
 
 const UrunEkle = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addUrun } = useEnvanter();
+  const isDepoProduct = location.pathname.includes('/depo');
 
   // Fetch categories
   const [kategoriler, setKategoriler] = useState([]);
+  const [depoProducts, setDepoProducts] = useState([]);
+  
   useEffect(() => {
-    const fetchKategoriler = async () => {
-      const { data, error } = await supabase.from('categories').select('*');
-      if (error) {
-        console.error('Fetch categories error:', error.message);
+    const fetchData = async () => {
+      // Fetch categories
+      const { data: catData, error: catError } = await supabase
+        .from('categories')
+        .select('*');
+      
+      if (catError) {
+        console.error('Fetch categories error:', catError);
       } else {
-        setKategoriler(data);
+        setKategoriler(catData);
+      }
+
+      // If adding malzeme, fetch depo products
+      if (!isDepoProduct) {
+        const { data: prodData, error: prodError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('inventory_type', 'depo');
+        
+        if (prodError) {
+          console.error('Fetch depo products error:', prodError);
+        } else {
+          setDepoProducts(prodData);
+        }
       }
     };
-    fetchKategoriler();
-  }, []);
 
-  // Fetch locations from DB, to get id and name
-  const [lokasyonlar, setLokasyonlar] = useState([]);
+    fetchData();
+  }, [isDepoProduct]);
+
+  // Fetch locations
+  const [locations, setLocations] = useState([]);
   useEffect(() => {
-    const fetchLokasyonlar = async () => {
-      const { data, error } = await supabase.from('locations').select('id, name');
+    const fetchLocations = async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name');
+      
       if (error) {
-        console.error('Fetch locations error:', error.message);
+        console.error('Fetch locations error:', error);
       } else {
-        setLokasyonlar(data);
+        setLocations(data);
       }
     };
-    fetchLokasyonlar();
+    
+    fetchLocations();
   }, []);
-
-  // Status options
-  const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
   const [formData, setFormData] = useState({
     ad: '',
@@ -46,9 +70,10 @@ const UrunEkle = () => {
     model: '',
     kategori: '',
     durum: 'Depoda',
-    lokasyon: '', // default empty to force selection or empty
+    lokasyon: '',
     seriNo: '',
     aciklama: '',
+    referenceProductId: ''
   });
 
   const handleChange = (
@@ -56,6 +81,21 @@ const UrunEkle = () => {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // If selecting a reference product, auto-fill some fields
+    if (name === 'referenceProductId' && value) {
+      const selectedProduct = depoProducts.find(p => p.id === value);
+      if (selectedProduct) {
+        setFormData(prev => ({
+          ...prev,
+          ad: selectedProduct.name,
+          marka: selectedProduct.brand || '',
+          model: selectedProduct.model || '',
+          kategori: selectedProduct.category_id,
+          referenceProductId: selectedProduct.id
+        }));
+      }
+    }
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,16 +105,21 @@ const UrunEkle = () => {
     setIsSubmitting(true);
 
     try {
-      // Check if a product with the same name, brand, and model exists
-      const existingBarkod = await checkExistingBarkod(
-        supabase,
-        formData.ad,
-        formData.marka,
-        formData.model
-      );
-
-      // Use existing barcode or generate new one
-      const barcode = existingBarkod || generateBarkod();
+      let barcode;
+      
+      if (isDepoProduct) {
+        // For depo products, check existing or generate new barcode
+        barcode = await checkExistingBarkod(
+          supabase,
+          formData.ad,
+          formData.marka,
+          formData.model
+        ) || generateBarkod();
+      } else {
+        // For malzeme products, use the same barcode as reference product
+        const refProduct = depoProducts.find(p => p.id === formData.referenceProductId);
+        barcode = refProduct?.barcode || generateBarkod();
+      }
 
       const { data, error } = await supabase
         .from('products')
@@ -91,6 +136,8 @@ const UrunEkle = () => {
             location_id: formData.lokasyon || null,
             photo_url: null,
             created_by: null,
+            inventory_type: isDepoProduct ? 'depo' : 'malzeme',
+            reference_product_id: isDepoProduct ? null : formData.referenceProductId || null
           },
         ]);
 
@@ -100,7 +147,7 @@ const UrunEkle = () => {
         addUrun(data[0]);
       }
 
-      navigate('/urunler');
+      navigate(isDepoProduct ? '/depo' : '/urunler');
     } catch (error) {
       console.error(error);
       alert('Kaydetme sırasında bir hata oluştu.');
@@ -112,8 +159,13 @@ const UrunEkle = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Yeni Ürün Ekle</h1>
-        <button onClick={() => navigate('/urunler')} className="text-gray-600 hover:text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-800">
+          {isDepoProduct ? 'Yeni Depo Ürünü Ekle' : 'Yeni Malzeme Ekle'}
+        </h1>
+        <button 
+          onClick={() => navigate(isDepoProduct ? '/depo' : '/urunler')} 
+          className="text-gray-600 hover:text-gray-900"
+        >
           <X className="h-6 w-6" />
         </button>
       </div>
@@ -125,6 +177,27 @@ const UrunEkle = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column */}
           <div className="space-y-4">
+            {!isDepoProduct && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Depo Ürünü Seç
+                </label>
+                <select
+                  name="referenceProductId"
+                  value={formData.referenceProductId}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">Depo Ürünü Seçin</option>
+                  {depoProducts.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name} - {product.brand} {product.model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label htmlFor="ad" className="block text-sm font-medium text-gray-700 mb-1">
                 Ürün Adı*
@@ -203,11 +276,10 @@ const UrunEkle = () => {
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
-                {durumlar.map((durum) => (
-                  <option key={durum} value={durum}>
-                    {durum}
-                  </option>
-                ))}
+                <option value="Depoda">Depoda</option>
+                <option value="Otelde">Otelde</option>
+                <option value="Serviste">Serviste</option>
+                <option value="Kiralandı">Kiralandı</option>
               </select>
             </div>
 
@@ -223,9 +295,9 @@ const UrunEkle = () => {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="">Lokasyon Seçin</option>
-                {lokasyonlar.map((lokasyon) => (
-                  <option key={lokasyon.id} value={lokasyon.id}>
-                    {lokasyon.name}
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
                   </option>
                 ))}
               </select>
@@ -261,30 +333,11 @@ const UrunEkle = () => {
           </div>
         </div>
 
-        {/* Fotoğraf Ekle */}
-        <div className="mt-6 border-t border-gray-200 pt-4">
-          <div className="flex items-center">
-            <button
-              type="button"
-              className="flex items-center justify-center border border-dashed border-gray-300 rounded-lg h-32 w-32 hover:border-indigo-500"
-            >
-              <div className="text-center">
-                <Camera className="h-8 w-8 text-gray-400 mx-auto" />
-                <span className="text-sm text-gray-500 mt-1 block">Fotoğraf Ekle</span>
-              </div>
-            </button>
-            <p className="text-sm text-gray-500 ml-4">
-              Ürün fotoğrafı eklemek için tıklayın. <br />
-              Önerilen boyut: 600x600 piksel
-            </p>
-          </div>
-        </div>
-
         {/* Buttons */}
         <div className="mt-6 border-t border-gray-200 pt-4 flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/urunler')}
+            onClick={() => navigate(isDepoProduct ? '/depo' : '/urunler')}
             className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
           >
             İptal
