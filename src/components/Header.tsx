@@ -19,7 +19,6 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
         >
           <Menu className="h-6 w-6 text-gray-700" />
         </button>
-        </div>
       </div>
       <div className="flex items-center space-x-4">
         <button className="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
