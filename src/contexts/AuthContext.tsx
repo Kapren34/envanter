@@ -48,51 +48,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    try {
-      const { data, error } = await supabase.rpc('authenticate_user', {
-        p_username: username,
-        p_password: password,
-      });
+  // Supabase expects email for signIn, so your "username" must be an email or adapt accordingly
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: username,
+    password,
+  });
 
-      if (error) throw error;
+  if (error) throw error;
 
-      if (data && data.length > 0) {
-        const userData = data[0];
+  if (data.session?.access_token && data.user) {
+    const token = data.session.access_token;
 
-        // Assume your RPC returns JWT token as access_token
-        const token = userData.access_token;
+    const userObj: User = {
+      id: data.user.id,
+      name: data.user.email || username,
+      role: 'user', // you can extend this by fetching role separately if needed
+      settings: {
+        company_name: 'POWERSOUND',
+        low_stock_limit: 5,
+        email_notifications: false,
+        auto_backup: true,
+      },
+    };
 
-        if (!token) throw new Error('No access token received from server');
+    setUser(userObj);
+    setIsAuthenticated(true);
 
-        const userObj: User = {
-          id: userData.user_id,
-          name: username,
-          role: userData.role,
-          settings: {
-            company_name: 'POWERSOUND',
-            low_stock_limit: 5,
-            email_notifications: false,
-            auto_backup: true,
-          },
-        };
+    localStorage.setItem('authUser', JSON.stringify(userObj));
+    localStorage.setItem('accessToken', token);
 
-        setUser(userObj);
-        setIsAuthenticated(true);
+    // This sets the auth token internally for future requests
+    supabase.auth.setSession({ access_token: token, refresh_token: data.session.refresh_token });
+  } else {
+    throw new Error('No access token received from server');
+  }
+};
 
-        // Save user and token in localStorage
-        localStorage.setItem('authUser', JSON.stringify(userObj));
-        localStorage.setItem('accessToken', token);
-
-        // Set token for supabase client to authenticate future requests
-        supabase.auth.setAuth(token);
-      } else {
-        throw new Error('Invalid credentials');
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  };
 
   const logout = async () => {
     try {
