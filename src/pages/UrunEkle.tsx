@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Camera } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
@@ -6,32 +5,40 @@ import { generateBarkod } from '../utils/barkodUtils';
 import { supabase } from '../lib/supabase';
 import React, { useState, useEffect } from 'react';
 
-
 const UrunEkle = () => {
   const navigate = useNavigate();
   const { addUrun } = useEnvanter();
 
-const [kategoriler, setKategoriler] = useState([]);
+  // Fetch categories
+  const [kategoriler, setKategoriler] = useState([]);
+  useEffect(() => {
+    const fetchKategoriler = async () => {
+      const { data, error } = await supabase.from('categories').select('*');
+      if (error) {
+        console.error('Fetch categories error:', error.message);
+      } else {
+        setKategoriler(data);
+      }
+    };
+    fetchKategoriler();
+  }, []);
 
-useEffect(() => {
-  const fetchKategoriler = async () => {
-    const { data, error } = await supabase.from('categories').select('*');
-    
-    console.log("Error:", error);
-    console.log("Fetched categories:", data);
+  // Fetch locations from DB, to get id and name
+  const [lokasyonlar, setLokasyonlar] = useState([]);
+  useEffect(() => {
+    const fetchLokasyonlar = async () => {
+      const { data, error } = await supabase.from('locations').select('id, name');
+      if (error) {
+        console.error('Fetch locations error:', error.message);
+      } else {
+        setLokasyonlar(data);
+      }
+    };
+    fetchLokasyonlar();
+  }, []);
 
-    if (error) {
-      console.error('Fetch error:', error.message);
-    } else {
-      setKategoriler(data);
-    }
-  };
-
-  fetchKategoriler();
-}, []);
-
-
-
+  // Status options
+  const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
   const [formData, setFormData] = useState({
     ad: '',
@@ -39,57 +46,51 @@ useEffect(() => {
     model: '',
     kategori: '',
     durum: 'Depoda',
-    lokasyon: 'Merkez',
+    lokasyon: '', // default empty to force selection or empty
     seriNo: '',
     aciklama: '',
   });
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  const barcode = generateBarkod();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const barcode = generateBarkod();
 
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .insert([{
-        barcode,                          // barcode not null
-        name: formData.ad,                // name not null
-        brand: formData.marka || null,   // brand nullable
-        model: formData.model || null,   // model nullable
-        category_id: formData.kategori || null, // category_id uuid nullable
-        serial_number: formData.seriNo || null, // serial_number nullable
-        description: formData.aciklama || null, // description nullable
-        status: formData.durum || 'Depoda',      // status with default 'Depoda'
-        location_id: formData.lokasyon || null,  // location_id uuid nullable (adjust if you have locations table)
-        photo_url: null,                 // photo_url nullable, not handled yet
-        created_by: null,                // you can set current user id here if available
-        // created_at will default to now() in DB
-      }]);
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([
+          {
+            barcode,
+            name: formData.ad,
+            brand: formData.marka || null,
+            model: formData.model || null,
+            category_id: formData.kategori || null,
+            serial_number: formData.seriNo || null,
+            description: formData.aciklama || null,
+            status: formData.durum || 'Depoda',
+            location_id: formData.lokasyon || null, // this is now UUID from DB
+            photo_url: null,
+            created_by: null, // set current user id here if available
+          },
+        ]);
 
-    if (error) {
-      throw error;
-    }
+      if (error) throw error;
 
-    // Optionally, add to context or local state
-    if (addUrun) {
-      addUrun(data[0]);
-    }
+      if (addUrun && data) {
+        addUrun(data[0]);
+      }
 
-    navigate('/urunler');
+      navigate('/urunler');
     } catch (error) {
       console.error(error);
       alert('Kaydetme sırasında bir hata oluştu.');
@@ -98,36 +99,11 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
   };
 
-
-
-  // Lokasyon ve durum seçenekleri
-  const lokasyonlar = [
-    'Depo',
-    'Merit Park',
-    'Merit Royal',
-    'Merit Cristal',
-    'Lord Place',
-    'Kaya Plazzo',
-    'Cratos',
-    'Acapolco',
-    'Elexsus',
-    'Chamada',
-    'Limak',
-    'Kaya Artemis',
-    'Concorde',
-    'Concorde Lefkosa',
-    'Grand Saphire'
-  ];
-  const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Yeni Ürün Ekle</h1>
-        <button
-          onClick={() => navigate('/urunler')}
-          className="text-gray-600 hover:text-gray-900"
-        >
+        <button onClick={() => navigate('/urunler')} className="text-gray-600 hover:text-gray-900">
           <X className="h-6 w-6" />
         </button>
       </div>
@@ -137,13 +113,10 @@ const handleSubmit = async (e: React.FormEvent) => {
         className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Sol Sütun */}
+          {/* Left Column */}
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="ad"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="ad" className="block text-sm font-medium text-gray-700 mb-1">
                 Ürün Adı*
               </label>
               <input
@@ -158,10 +131,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div>
-              <label
-                htmlFor="marka"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="marka" className="block text-sm font-medium text-gray-700 mb-1">
                 Marka
               </label>
               <input
@@ -175,10 +145,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div>
-              <label
-                htmlFor="model"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-1">
                 Model
               </label>
               <input
@@ -192,39 +159,31 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div>
-              <label
-                htmlFor="kategori"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="kategori" className="block text-sm font-medium text-gray-700 mb-1">
                 Kategori*
               </label>
-<select
-  id="kategori"
-  name="kategori"
-  required
-  value={formData.kategori}
-  onChange={handleChange}
-  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
->
-  <option value="">Kategori Seçin</option>
-  {kategoriler.map((kategori) => (
-    <option key={kategori.id} value={kategori.id}>
-      {kategori.name}
-    </option>
-  ))}
-</select>
-
-
+              <select
+                id="kategori"
+                name="kategori"
+                required
+                value={formData.kategori}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Kategori Seçin</option>
+                {kategoriler.map((kategori) => (
+                  <option key={kategori.id} value={kategori.id}>
+                    {kategori.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Sağ Sütun */}
+          {/* Right Column */}
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="durum"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="durum" className="block text-sm font-medium text-gray-700 mb-1">
                 Durum
               </label>
               <select
@@ -243,10 +202,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div>
-              <label
-                htmlFor="lokasyon"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="lokasyon" className="block text-sm font-medium text-gray-700 mb-1">
                 Lokasyon
               </label>
               <select
@@ -256,19 +212,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
+                <option value="">Lokasyon Seçin</option>
                 {lokasyonlar.map((lokasyon) => (
-                  <option key={lokasyon} value={lokasyon}>
-                    {lokasyon}
+                  <option key={lokasyon.id} value={lokasyon.id}>
+                    {lokasyon.name}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label
-                htmlFor="seriNo"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="seriNo" className="block text-sm font-medium text-gray-700 mb-1">
                 Seri No
               </label>
               <input
@@ -282,10 +236,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div>
-              <label
-                htmlFor="aciklama"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="aciklama" className="block text-sm font-medium text-gray-700 mb-1">
                 Açıklama
               </label>
               <textarea
@@ -309,9 +260,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             >
               <div className="text-center">
                 <Camera className="h-8 w-8 text-gray-400 mx-auto" />
-                <span className="text-sm text-gray-500 mt-1 block">
-                  Fotoğraf Ekle
-                </span>
+                <span className="text-sm text-gray-500 mt-1 block">Fotoğraf Ekle</span>
               </div>
             </button>
             <p className="text-sm text-gray-500 ml-4">
@@ -321,7 +270,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         </div>
 
-        {/* Butonlar */}
+        {/* Buttons */}
         <div className="mt-6 border-t border-gray-200 pt-4 flex justify-end space-x-3">
           <button
             type="button"
@@ -331,15 +280,15 @@ const handleSubmit = async (e: React.FormEvent) => {
             İptal
           </button>
           <button
-        type="submit"
-        disabled={isSubmitting}
-        className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center ${
-          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-        }`}
-      >
-        <Save className="h-5 w-5 mr-2" />
-        {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
-      </button>
+            type="submit"
+            disabled={isSubmitting}
+            className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            <Save className="h-5 w-5 mr-2" />
+            {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+          </button>
         </div>
       </form>
     </div>
