@@ -124,10 +124,10 @@ const UrunListesi = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Ürün Listesi</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Malzeme Takip</h1>
         <Link to="/urunler/ekle" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
           <Plus className="h-5 w-5 mr-2" />
-          Yeni Ürün
+          Yeni Malzeme
         </Link>
       </div>
       
