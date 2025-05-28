@@ -23,37 +23,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      // First check if the user exists
       const { data: userData, error: userError } = await supabase
         .from('auth_users')
         .select('id, username, role, password_hash')
         .eq('username', username)
-        .maybeSingle();
+        .single();
 
-      if (userError) {
+      if (userError || !userData) {
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
-      if (!userData) {
-        throw new Error('Kullanıcı adı veya şifre hatalı');
-      }
-
-      // Verify password only if we found a user
-      const { data: verifyData, error: verifyError } = await supabase
+      const { data: isValid, error: verifyError } = await supabase
         .rpc('verify_password', {
           password: password,
           hash: userData.password_hash
         });
 
-      if (verifyError || !verifyData) {
+      if (verifyError || !isValid) {
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
-      setUser({
+      const user = {
         id: userData.id,
         username: userData.username,
-        role: userData.role
-      });
+        role: userData.role as 'admin' | 'user'
+      };
+
+      setUser(user);
+      localStorage.setItem('auth_user', JSON.stringify(user));
 
     } catch (error) {
       console.error('Login error:', error);
@@ -62,19 +59,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    localStorage.removeItem('auth_user');
     setUser(null);
   };
 
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Check if there's a session in localStorage
         const savedUser = localStorage.getItem('auth_user');
         if (savedUser) {
           setUser(JSON.parse(savedUser));
         }
       } catch (error) {
         console.error('Session check error:', error);
+        localStorage.removeItem('auth_user');
       } finally {
         setIsLoading(false);
       }
@@ -82,15 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     checkSession();
   }, []);
-
-  // Save user to localStorage when it changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('auth_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('auth_user');
-    }
-  }, [user]);
 
   if (isLoading) {
     return (

@@ -68,11 +68,6 @@ const Login = () => {
           <p className="mt-2 text-sm text-gray-600">
             Ses, Işık ve Görüntü Sistemleri
           </p>
-          {connectionStatus === 'error' && (
-            <p className="mt-2 text-sm text-red-600">
-              Veritabanı bağlantısı kurulamadı. Lütfen daha sonra tekrar deneyin.
-            </p>
-          )}
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -129,7 +124,7 @@ const Login = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading || connectionStatus !== 'connected'}
+                  disabled={isLoading || connectionStatus === 'error'}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   {isLoading ? (
