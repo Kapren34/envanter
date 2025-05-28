@@ -29,11 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('username', username)
         .single();
 
-      if (userError) {
-        throw new Error('Kullanıcı adı veya şifre hatalı');
-      }
-
-      if (!userData) {
+      if (userError || !userData) {
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
@@ -66,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('auth_user');
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Çıkış yapılırken hata:', error);
     }
   };
 
@@ -90,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch (error) {
-        console.error('Session check error:', error);
         localStorage.removeItem('auth_user');
         setUser(null);
       } finally {

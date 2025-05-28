@@ -7,16 +7,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL ve Anon Key tanımlanmamış!');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: localStorage
-  },
-  global: {
-    headers: {
-      'x-client-info': 'powersound-depo'
-    }
-  }
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
