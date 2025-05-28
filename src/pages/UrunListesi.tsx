@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan, CheckSquare, Square } from 'lucide-react';
+import { Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan, CheckSquare, Square, Package } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import BarcodeScanner from '../components/BarcodeScanner';
@@ -25,6 +25,7 @@ const UrunListesi = () => {
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   
   React.useEffect(() => {
     const fetchLocations = async () => {
@@ -130,6 +131,43 @@ const UrunListesi = () => {
     }
   };
 
+  const handleWarehouseMovement = () => {
+    if (selectedProducts.length === 0) {
+      alert('Lütfen en az bir ürün seçin');
+      return;
+    }
+    setShowWarehouseModal(true);
+  };
+
+  const handleWarehouseMovementSubmit = async () => {
+    try {
+      for (const productId of selectedProducts) {
+        await addHareket({
+          id: '',
+          urunId: productId,
+          urunAdi: urunler.find(u => u.id === productId)?.ad || '',
+          tip: movementType,
+          miktar: movementQuantity,
+          tarih: new Date().toLocaleDateString('tr-TR'),
+          aciklama: movementDescription,
+          lokasyon: movementLocation,
+          kullanici: 'Admin'
+        });
+      }
+
+      setShowWarehouseModal(false);
+      setSelectedProducts([]);
+      setMovementQuantity(1);
+      setMovementDescription('');
+      setMovementLocation('');
+
+      alert(`${selectedProducts.length} ürün için ${movementType.toLowerCase()} kaydı başarıyla oluşturuldu.`);
+    } catch (error) {
+      console.error('Toplu hareket oluşturma hatası:', error);
+      alert('Hareket kayıtları oluşturulurken bir hata oluştu.');
+    }
+  };
+
   const exportSelectedProducts = () => {
     const productsToExport = sortedUrunler.filter(urun => selectedProducts.includes(urun.id));
     exportToExcel(
@@ -161,13 +199,18 @@ const UrunListesi = () => {
             <Scan className="h-5 w-5 mr-2" />
             Barkod Tara
           </button>
-          <Link
-            to="/urunler/ekle"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
+          <button
+            onClick={handleWarehouseMovement}
+            disabled={selectedProducts.length === 0}
+            className={`flex items-center px-4 py-2 rounded-lg ${
+              selectedProducts.length === 0
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
           >
-            <Plus className="h-5 w-5 mr-2" />
-            Yeni Malzeme
-          </Link>
+            <Package className="h-5 w-5 mr-2" />
+            Depo İşlemleri ({selectedProducts.length})
+          </button>
         </div>
       </div>
       
@@ -534,6 +577,85 @@ const UrunListesi = () => {
               </button>
               <button
                 onClick={handleMovementSubmit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWarehouseModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Toplu Depo İşlemi ({selectedProducts.length} ürün)
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  İşlem Tipi
+                </label>
+                <select
+                  value={movementType}
+                  onChange={(e) => setMovementType(e.target.value as 'Giriş' | 'Çıkış')}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                >
+                  <option value="Giriş">Giriş</option>
+                  <option value="Çıkış">Çıkış</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Miktar
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={movementQuantity}
+                  onChange={(e) => setMovementQuantity(parseInt(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lokasyon
+                </label>
+                <select
+                  value={movementLocation}
+                  onChange={(e) => setMovementLocation(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                >
+                  <option value="">Lokasyon Seçin</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Açıklama
+                </label>
+                <textarea
+                  value={movementDescription}
+                  onChange={(e) => setMovementDescription(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowWarehouseModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleWarehouseMovementSubmit}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
                 Kaydet
