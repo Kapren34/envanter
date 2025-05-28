@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
 
 const Panel = () => {
   const { user, logout } = useAuth();
@@ -45,7 +44,7 @@ const Panel = () => {
   const fetchUsers = async () => {
     const { data, error } = await supabase.from('users').select('*');
     if (error) {
-      toast.error('Error fetching users');
+      alert('Error fetching users');
     } else {
       setUsers(data);
     }
@@ -83,7 +82,7 @@ const Panel = () => {
       });
     }
 
-    toast.success('User created successfully');
+    alert('User created successfully');
     setNewUser({ email: '', password: '', role: '' });
     fetchUsers();
     setLoading(false);
@@ -122,10 +121,10 @@ const Panel = () => {
         setLoading(false);
         return;
       }
-      toast.success('Password updated');
+      alert('Password updated');
     }
 
-    toast.success('Profile updated successfully');
+    alert('Profile updated successfully');
     setUserProfile((prev) => ({ ...prev, password: '', confirmPassword: '' }));
     setLoading(false);
   };
