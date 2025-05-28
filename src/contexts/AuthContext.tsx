@@ -105,10 +105,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string) => {
     try {
-      // First, try to sign in with email
+      // First, check if the identifier is an email
+      const isEmail = identifier.includes('@');
+      let email: string;
+      
+      if (!isEmail) {
+        // If identifier is not an email, look up the user's email by username
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('username', identifier)
+          .maybeSingle();
+
+        if (userError || !userData?.email) {
+          throw new Error('Geçersiz kullanıcı adı veya şifre');
+        }
+
+        email = userData.email;
+      } else {
+        email = identifier;
+      }
+
+      // Now sign in with the email
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: identifier,
-        password: password
+        email,
+        password
       });
 
       if (signInError) {
