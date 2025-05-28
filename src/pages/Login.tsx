@@ -6,14 +6,12 @@ import { supabase } from '../lib/supabase';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, resetPassword, isAuthenticated } = useAuth();
-  const [identifier, setIdentifier] = useState('');
+  const { login, isAuthenticated } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<string>('');
+  const [connectionStatus, setConnectionStatus] = useState<string>('checking');
 
   useEffect(() => {
     const testConnection = async () => {
@@ -45,43 +43,15 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccessMessage('');
     setIsLoading(true);
 
     try {
-      await login(identifier, password);
+      await login(username, password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Giriş yapılırken bir hata oluştu');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    if (!identifier) {
-      setError('Lütfen email adresinizi girin');
-      return;
-    }
-
-    if (!identifier.includes('@')) {
-      setError('Lütfen geçerli bir email adresi girin');
-      return;
-    }
-
-    setError('');
-    setSuccessMessage('');
-    setIsResetting(true);
-
-    try {
-      await resetPassword(identifier);
-      setSuccessMessage('Şifre sıfırlama bağlantısı email adresinize gönderildi');
-      setIdentifier('');
-      setPassword('');
-    } catch (err: any) {
-      setError(err.message || 'Şifre sıfırlama işlemi başarısız oldu');
-    } finally {
-      setIsResetting(false);
     }
   };
 
@@ -110,20 +80,19 @@ const Login = () => {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label
-                  htmlFor="identifier"
+                  htmlFor="username"
                   className="block text-sm font-medium text-gray-700"
                 >
                   Kullanıcı Adı
                 </label>
                 <div className="mt-1">
                   <input
-                    id="identifier"
-                    name="identifier"
+                    id="username"
+                    name="username"
                     type="text"
-                    autoComplete="username"
                     required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Kullanıcı adınızı girin"
                   />
@@ -142,7 +111,6 @@ const Login = () => {
                     id="password"
                     name="password"
                     type="password"
-                    autoComplete="current-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -158,30 +126,20 @@ const Login = () => {
                 </div>
               )}
 
-              {successMessage && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                  {successMessage}
-                </div>
-              )}
-
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading || connectionStatus === 'error'}
+                  disabled={isLoading || connectionStatus !== 'connected'}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
-                  {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-                </button>
-              </div>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleResetPassword}
-                  disabled={isResetting || connectionStatus === 'error'}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 focus:outline-none"
-                >
-                  {isResetting ? 'İşleniyor...' : 'Şifremi Unuttum'}
+                  {isLoading ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Giriş yapılıyor...
+                    </div>
+                  ) : (
+                    'Giriş Yap'
+                  )}
                 </button>
               </div>
             </form>

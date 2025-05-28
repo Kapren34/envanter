@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface User {
@@ -108,34 +108,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (identifier: string, password: string) => {
+  const login = async (username: string, password: string) => {
     try {
+      // First get the user's email from the username
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('username', username)
+        .single();
+
+      if (userError || !userData?.email) {
+        throw new Error('Kullanıcı adı veya şifre hatalı');
+      }
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: 'admin@powersound.com',
-        password: 'admin123'
+        email: userData.email,
+        password
       });
 
       if (signInError) {
-        console.error('Sign in error:', signInError);
-        throw new Error('Giriş yapılırken bir hata oluştu');
+        throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
       if (!data.user) {
         throw new Error('Giriş başarısız');
       }
 
-      const userData = await fetchUserData(data.user.id);
+      const userDetails = await fetchUserData(data.user.id);
       
-      if (!userData) {
+      if (!userDetails) {
         throw new Error('Kullanıcı bilgileri alınamadı');
       }
 
       setUser({
-        id: userData.id,
-        email: userData.email,
-        role: userData.role,
-        full_name: userData.full_name,
-        username: userData.username
+        id: userDetails.id,
+        email: userDetails.email,
+        role: userDetails.role,
+        full_name: userDetails.full_name,
+        username: userDetails.username
       });
 
     } catch (error) {
@@ -151,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.error('Password reset error:', error);
         throw new Error('Şifre sıfırlama işlemi başarısız oldu');
       }
     } catch (error) {
@@ -172,7 +181,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>;
   }
 
   return (
