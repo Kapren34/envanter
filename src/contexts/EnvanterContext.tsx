@@ -68,6 +68,9 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           *,
           categories (
             name
+          ),
+          locations (
+            name
           )
         `);
 
@@ -77,14 +80,14 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const mappedProducts = products.map(p => ({
           id: p.id,
           ad: p.name,
-          marka: p.brand,
-          model: p.model,
-          kategori: p.categories?.name || '',
-          durum: p.status,
-          lokasyon: p.location_id,
-          seriNo: p.serial_number,
-          aciklama: p.description,
-          barkod: p.barcode,
+          marka: p.brand || '',
+          model: p.model || '',
+          kategori: p.category_id || '',
+          durum: p.status || 'Depoda',
+          lokasyon: p.location_id || '',
+          seriNo: p.serial_number || '',
+          aciklama: p.description || '',
+          barkod: p.barcode || '',
           miktar: p.quantity || 1,
           eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
         }));
@@ -124,6 +127,9 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           *,
           products (
             name
+          ),
+          locations (
+            name
           )
         `);
 
@@ -137,9 +143,9 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           tip: m.type,
           miktar: m.quantity,
           tarih: new Date(m.created_at).toLocaleDateString('tr-TR'),
-          aciklama: m.description,
-          lokasyon: m.location_id,
-          kullanici: m.user_id
+          aciklama: m.description || '',
+          lokasyon: m.location_id || '',
+          kullanici: m.user_id || 'Admin'
         }));
         setHareketler(mappedMovements);
       }
