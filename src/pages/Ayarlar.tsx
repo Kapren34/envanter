@@ -1,6 +1,5 @@
-// Updated React Component with all fixes and improvements
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/initSupabase';
 import toast from 'react-hot-toast';
 
