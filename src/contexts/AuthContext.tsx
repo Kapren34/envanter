@@ -13,6 +13,7 @@ interface AuthContextType {
   user: User | null;
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
   refreshSession: () => Promise<void>;
@@ -117,8 +118,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('username', identifier)
           .maybeSingle();
 
-        if (userError || !userData?.email) {
-          throw new Error('Geçersiz kullanıcı adı veya şifre');
+        if (userError) {
+          console.error('Username lookup error:', userError);
+          throw new Error('Kullanıcı adı veya şifre hatalı');
+        }
+
+        if (!userData?.email) {
+          throw new Error('Kullanıcı adı bulunamadı');
         }
 
         email = userData.email;
@@ -133,10 +139,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (signInError) {
+        console.error('Sign in error:', signInError);
         if (signInError.message.includes('Invalid login credentials')) {
-          throw new Error('Geçersiz kullanıcı adı veya şifre');
+          throw new Error('Kullanıcı adı/email veya şifre hatalı');
         }
-        throw signInError;
+        throw new Error('Giriş yapılırken bir hata oluştu');
       }
 
       if (!data.user) {
@@ -164,6 +171,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error('Password reset error:', error);
+        throw new Error('Şifre sıfırlama işlemi başarısız oldu');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error instanceof Error ? error : new Error('Şifre sıfırlama işlemi başarısız oldu');
+    }
+  };
+
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -181,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         login,
         logout,
+        resetPassword,
         refreshSession,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',

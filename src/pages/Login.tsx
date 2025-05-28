@@ -5,11 +5,13 @@ import { Package } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, resetPassword, isAuthenticated } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to="/" />;
@@ -18,6 +20,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setIsLoading(true);
 
     try {
@@ -27,6 +30,33 @@ const Login = () => {
       setError(err.message || 'Giriş yapılırken bir hata oluştu');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!identifier) {
+      setError('Lütfen email adresinizi girin');
+      return;
+    }
+
+    if (!identifier.includes('@')) {
+      setError('Lütfen geçerli bir email adresi girin');
+      return;
+    }
+
+    setError('');
+    setSuccessMessage('');
+    setIsResetting(true);
+
+    try {
+      await resetPassword(identifier);
+      setSuccessMessage('Şifre sıfırlama bağlantısı email adresinize gönderildi');
+      setIdentifier('');
+      setPassword('');
+    } catch (err: any) {
+      setError(err.message || 'Şifre sıfırlama işlemi başarısız oldu');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -98,6 +128,12 @@ const Login = () => {
                 </div>
               )}
 
+              {successMessage && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                  {successMessage}
+                </div>
+              )}
+
               <div>
                 <button
                   type="submit"
@@ -105,6 +141,17 @@ const Login = () => {
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+                </button>
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={isResetting}
+                  className="text-sm text-indigo-600 hover:text-indigo-500 focus:outline-none"
+                >
+                  {isResetting ? 'İşleniyor...' : 'Şifremi Unuttum'}
                 </button>
               </div>
             </form>
