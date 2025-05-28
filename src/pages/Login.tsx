@@ -16,7 +16,6 @@ const Login = () => {
   const [connectionStatus, setConnectionStatus] = useState<string>('');
 
   useEffect(() => {
-    // Test Supabase connection
     const testConnection = async () => {
       try {
         const { data, error } = await supabase
@@ -114,7 +113,7 @@ const Login = () => {
                   htmlFor="identifier"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Email veya Kullanıcı Adı
+                  Kullanıcı Adı
                 </label>
                 <div className="mt-1">
                   <input
@@ -126,7 +125,7 @@ const Login = () => {
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Email veya kullanıcı adınızı girin"
+                    placeholder="Kullanıcı adınızı girin"
                   />
                 </div>
               </div>

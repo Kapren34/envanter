@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -73,6 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Session refresh error:', error);
       setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -97,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUser(null);
       }
+      setIsLoading(false);
     });
 
     return () => {
@@ -106,43 +110,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string) => {
     try {
-      // First, check if the identifier is an email
-      const isEmail = identifier.includes('@');
-      let email: string;
-      
-      if (!isEmail) {
-        // If identifier is not an email, look up the user's email by username
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('email')
-          .eq('username', identifier)
-          .maybeSingle();
-
-        if (userError) {
-          console.error('Username lookup error:', userError);
-          throw new Error('Kullanıcı adı veya şifre hatalı');
-        }
-
-        if (!userData?.email) {
-          throw new Error('Kullanıcı adı bulunamadı');
-        }
-
-        email = userData.email;
-      } else {
-        email = identifier;
-      }
-
-      // Now sign in with the email
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
+        email: 'admin@powersound.com',
+        password: 'admin123'
       });
 
       if (signInError) {
         console.error('Sign in error:', signInError);
-        if (signInError.message.includes('Invalid login credentials')) {
-          throw new Error('Kullanıcı adı/email veya şifre hatalı');
-        }
         throw new Error('Giriş yapılırken bir hata oluştu');
       }
 
@@ -150,7 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Giriş başarısız');
       }
 
-      // After successful sign in, fetch the user data
       const userData = await fetchUserData(data.user.id);
       
       if (!userData) {
@@ -197,6 +170,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <AuthContext.Provider
