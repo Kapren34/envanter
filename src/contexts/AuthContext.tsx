@@ -51,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(user);
       localStorage.setItem('auth_user', JSON.stringify(user));
-
     } catch (error) {
       throw error instanceof Error ? error : new Error('Giriş yapılırken bir hata oluştu');
     }
