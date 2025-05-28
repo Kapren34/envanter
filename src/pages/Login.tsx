@@ -16,20 +16,41 @@ const Login = () => {
   useEffect(() => {
     const testConnection = async () => {
       try {
-        const { data, error } = await supabase
+        // First check if we have a valid session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          throw sessionError;
+        }
+
+        // If no valid session, try to refresh
+        if (!session) {
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            throw refreshError;
+          }
+        }
+
+        // Test database connection
+        const { data, error: dbError } = await supabase
           .from('auth_users')
           .select('count')
           .single();
 
-        if (error) {
-          console.error('Supabase connection error:', error);
-          setConnectionStatus('error');
+        if (dbError) {
+          if (dbError.message.includes('JWT')) {
+            // If JWT error, clear session and show login
+            await supabase.auth.signOut();
+            setConnectionStatus('jwt_expired');
+          } else {
+            throw dbError;
+          }
         } else {
           setConnectionStatus('connected');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Connection test error:', err);
-        setConnectionStatus('error');
+        setConnectionStatus(err.message.includes('JWT') ? 'jwt_expired' : 'error');
       }
     };
 
@@ -49,7 +70,16 @@ const Login = () => {
       await login(username, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Giriş yapılırken bir hata oluştu');
+      let errorMessage = 'Giriş yapılırken bir hata oluştu';
+      
+      if (err.message.includes('JWT')) {
+        errorMessage = 'Oturum süresi doldu. Lütfen tekrar giriş yapın.';
+        await supabase.auth.signOut(); // Clear any expired session
+      } else if (err.message.includes('credentials')) {
+        errorMessage = 'Kullanıcı adı veya şifre hatalı';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +102,12 @@ const Login = () => {
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-white py-8 px-4 shadow-lg rounded-lg sm:px-10">
+            {connectionStatus === 'jwt_expired' && (
+              <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
+                Oturum süreniz doldu. Lütfen tekrar giriş yapın.
+              </div>
+            )}
+            
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label
