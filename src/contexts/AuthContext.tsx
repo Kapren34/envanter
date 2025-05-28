@@ -28,23 +28,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('auth_users')
         .select('id, username, role, password_hash')
         .eq('username', username)
-        .maybeSingle();
+        .single();
 
-      if (userError || !userData) {
+      if (userError) {
+        console.error('User lookup error:', userError);
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
-      // Verify the password using the database function
+      if (!userData) {
+        throw new Error('Kullanıcı adı veya şifre hatalı');
+      }
+
+      // Verify the password
       const { data: isValid, error: verifyError } = await supabase
         .rpc('verify_password', {
           password: password,
           hash: userData.password_hash
         });
 
-      if (verifyError || !isValid) {
+      if (verifyError) {
+        console.error('Password verification error:', verifyError);
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
+      if (!isValid) {
+        throw new Error('Kullanıcı adı veya şifre hatalı');
+      }
+
+      // If we get here, authentication was successful
       const user = {
         id: userData.id,
         username: userData.username,
@@ -56,13 +67,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Kullanıcı adı veya şifre hatalı');
+      throw error instanceof Error ? error : new Error('Giriş yapılırken bir hata oluştu');
     }
   };
 
   const logout = async () => {
-    localStorage.removeItem('auth_user');
-    setUser(null);
+    try {
+      localStorage.removeItem('auth_user');
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   useEffect(() => {
@@ -70,11 +85,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const savedUser = localStorage.getItem('auth_user');
         if (savedUser) {
-          setUser(JSON.parse(savedUser));
+          const parsedUser = JSON.parse(savedUser);
+          // Verify the user still exists in the database
+          const { data, error } = await supabase
+            .from('auth_users')
+            .select('id, username, role')
+            .eq('id', parsedUser.id)
+            .single();
+
+          if (error || !data) {
+            localStorage.removeItem('auth_user');
+            setUser(null);
+          } else {
+            setUser(data);
+          }
         }
       } catch (error) {
         console.error('Session check error:', error);
         localStorage.removeItem('auth_user');
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
