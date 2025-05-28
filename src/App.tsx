@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Anasayfa from './pages/Anasayfa';
 import UrunListesi from './pages/UrunListesi';
 import UrunEkle from './pages/UrunEkle';
@@ -21,6 +22,7 @@ function App() {
       <EnvanterProvider>
         <Router>
           <Routes>
+            <Route path="/login" element={<Login />} />
             <Route path="/" element={
               <PrivateRoute>
                 <Layout />
