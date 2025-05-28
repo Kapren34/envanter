@@ -26,23 +26,28 @@ const HareketEkle = () => {
     });
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Yeni hareket oluştur
-    const yeniHareket = {
-      ...formData,
-      id: Date.now().toString(),
-      tarih: new Date().toLocaleDateString('tr-TR'),
-      urunAdi: selectedUrun?.ad || '',
-      kullanici: 'Admin',
-    };
-    
-    // Hareketi ekle
-    addHareket(yeniHareket);
-    
-    // Hareket listesine dön
-    navigate('/hareketler');
+    try {
+      // Yeni hareket oluştur
+      const yeniHareket = {
+        ...formData,
+        id: Date.now().toString(),
+        tarih: new Date().toLocaleDateString('tr-TR'),
+        urunAdi: selectedUrun?.ad || '',
+        kullanici: 'Admin',
+      };
+      
+      // Hareketi ekle
+      await addHareket(yeniHareket);
+      
+      // Hareket listesine dön
+      navigate('/hareketler');
+    } catch (error) {
+      console.error('Hareket ekleme hatası:', error);
+      alert(error instanceof Error ? error.message : 'Hareket eklenirken bir hata oluştu.');
+    }
   };
   
   // Lokasyon seçenekleri

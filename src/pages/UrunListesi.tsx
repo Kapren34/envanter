@@ -111,7 +111,39 @@ const UrunListesi = () => {
       alert(`Ürün ${movementType.toLowerCase()} kaydı başarıyla oluşturuldu.`);
     } catch (error) {
       console.error('Hareket oluşturma hatası:', error);
-      alert('Hareket kaydı oluşturulurken bir hata oluştu.');
+      alert(error instanceof Error ? error.message : 'Hareket kaydı oluşturulurken bir hata oluştu.');
+    }
+  };
+
+  const handleWarehouseMovementSubmit = async () => {
+    try {
+      for (const productId of selectedProducts) {
+        const product = urunler.find(u => u.id === productId);
+        if (!product) continue;
+
+        await addHareket({
+          id: '',
+          urunId: productId,
+          urunAdi: product.ad,
+          tip: movementType,
+          miktar: movementQuantity,
+          tarih: new Date().toLocaleDateString('tr-TR'),
+          aciklama: movementDescription,
+          lokasyon: movementLocation,
+          kullanici: 'Admin'
+        });
+      }
+
+      setShowWarehouseModal(false);
+      setSelectedProducts([]);
+      setMovementQuantity(1);
+      setMovementDescription('');
+      setMovementLocation('');
+
+      alert(`${selectedProducts.length} ürün için ${movementType.toLowerCase()} kaydı başarıyla oluşturuldu.`);
+    } catch (error) {
+      console.error('Toplu hareket oluşturma hatası:', error);
+      alert(error instanceof Error ? error.message : 'Hareket kayıtları oluşturulurken bir hata oluştu.');
     }
   };
 
@@ -137,35 +169,6 @@ const UrunListesi = () => {
       return;
     }
     setShowWarehouseModal(true);
-  };
-
-  const handleWarehouseMovementSubmit = async () => {
-    try {
-      for (const productId of selectedProducts) {
-        await addHareket({
-          id: '',
-          urunId: productId,
-          urunAdi: urunler.find(u => u.id === productId)?.ad || '',
-          tip: movementType,
-          miktar: movementQuantity,
-          tarih: new Date().toLocaleDateString('tr-TR'),
-          aciklama: movementDescription,
-          lokasyon: movementLocation,
-          kullanici: 'Admin'
-        });
-      }
-
-      setShowWarehouseModal(false);
-      setSelectedProducts([]);
-      setMovementQuantity(1);
-      setMovementDescription('');
-      setMovementLocation('');
-
-      alert(`${selectedProducts.length} ürün için ${movementType.toLowerCase()} kaydı başarıyla oluşturuldu.`);
-    } catch (error) {
-      console.error('Toplu hareket oluşturma hatası:', error);
-      alert('Hareket kayıtları oluşturulurken bir hata oluştu.');
-    }
   };
 
   const exportSelectedProducts = () => {
