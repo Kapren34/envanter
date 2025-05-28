@@ -23,7 +23,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
-      // First, try to find the user by username
       const { data: userData, error: userError } = await supabase
         .from('auth_users')
         .select('id, username, role, password_hash')
@@ -38,7 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
-      // Verify the password
       const { data: isValid, error: verifyError } = await supabase
         .rpc('verify_password', {
           password: password,
@@ -49,7 +47,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
-      // If we get here, authentication was successful
       const user = {
         id: userData.id,
         username: userData.username,
@@ -60,7 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('auth_user', JSON.stringify(user));
 
     } catch (error) {
-      console.error('Login error:', error);
       throw error instanceof Error ? error : new Error('Giriş yapılırken bir hata oluştu');
     }
   };
@@ -80,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('auth_user');
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
-          // Verify the user still exists in the database
           const { data, error } = await supabase
             .from('auth_users')
             .select('id, username, role')

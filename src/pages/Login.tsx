@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Package } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,7 +24,7 @@ const Login = () => {
       await login(username, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Giriş yapılırken bir hata oluştu');
+      setError('Kullanıcı adı veya şifre hatalı');
     } finally {
       setIsLoading(false);
     }
