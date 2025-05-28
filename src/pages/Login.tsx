@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Package } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -12,6 +13,31 @@ const Login = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<string>('');
+
+  useEffect(() => {
+    // Test Supabase connection
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('count')
+          .single();
+
+        if (error) {
+          console.error('Supabase connection error:', error);
+          setConnectionStatus('error');
+        } else {
+          setConnectionStatus('connected');
+        }
+      } catch (err) {
+        console.error('Connection test error:', err);
+        setConnectionStatus('error');
+      }
+    };
+
+    testConnection();
+  }, []);
 
   if (isAuthenticated) {
     return <Navigate to="/" />;
@@ -73,6 +99,11 @@ const Login = () => {
           <p className="mt-2 text-sm text-gray-600">
             Ses, Işık ve Görüntü Sistemleri
           </p>
+          {connectionStatus === 'error' && (
+            <p className="mt-2 text-sm text-red-600">
+              Veritabanı bağlantısı kurulamadı. Lütfen daha sonra tekrar deneyin.
+            </p>
+          )}
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -137,7 +168,7 @@ const Login = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || connectionStatus === 'error'}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
@@ -148,7 +179,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={handleResetPassword}
-                  disabled={isResetting}
+                  disabled={isResetting || connectionStatus === 'error'}
                   className="text-sm text-indigo-600 hover:text-indigo-500 focus:outline-none"
                 >
                   {isResetting ? 'İşleniyor...' : 'Şifremi Unuttum'}
