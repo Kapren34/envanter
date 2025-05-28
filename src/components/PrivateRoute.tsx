@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, login } = useAuth();
-  const location = useLocation();
 
   useEffect(() => {
     const autoLogin = async () => {
