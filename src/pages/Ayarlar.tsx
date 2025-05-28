@@ -9,7 +9,7 @@ const Ayarlar = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState({
-    fullName: '',
+    username: '',
     email: '',
     currentPassword: '',
     newPassword: '',
@@ -21,8 +21,8 @@ const Ayarlar = () => {
       if (!user) return;
       try {
         const { data, error } = await supabase
-          .from('users')
-          .select('full_name, email')
+          .from('auth_users')
+          .select('username')
           .eq('id', user.id)
           .single();
 
@@ -30,8 +30,8 @@ const Ayarlar = () => {
 
         setUserProfile(prev => ({
           ...prev,
-          fullName: data.full_name || '',
-          email: data.email || ''
+          username: data.username || '',
+          email: user.email || ''
         }));
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -61,13 +61,12 @@ const Ayarlar = () => {
     try {
       // Update profile information
       const updates = {
-        id: user?.id,
-        full_name: userProfile.fullName,
+        username: userProfile.username,
         updated_at: new Date()
       };
 
       const { error: updateError } = await supabase
-        .from('users')
+        .from('auth_users')
         .update(updates)
         .eq('id', user?.id);
 
@@ -119,12 +118,12 @@ const Ayarlar = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Ad Soyad
+              Kullanıcı Adı
             </label>
             <input
               type="text"
-              name="fullName"
-              value={userProfile.fullName}
+              name="username"
+              value={userProfile.username}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
