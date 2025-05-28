@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan, CheckSquare, Square, Package } from 'lucide-react';
+import { Filter, Search, Trash2, Edit, ArrowDown, ArrowUp, Download, LogIn, LogOut, Scan, CheckSquare, Square, Package, Plus } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
 import BarkodGenerator from '../components/BarkodGenerator';
 import BarcodeScanner from '../components/BarcodeScanner';
@@ -26,7 +26,7 @@ const UrunListesi = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
-  
+
   React.useEffect(() => {
     const fetchLocations = async () => {
       const { data, error } = await supabase
@@ -48,7 +48,7 @@ const UrunListesi = () => {
     const location = locations.find(loc => loc.id === locationId);
     return location ? location.name : 'Unknown';
   };
-  
+
   const filteredUrunler = urunler.filter((urun) => {
     const matchesSearch = urun.ad.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           urun.barkod.toLowerCase().includes(searchTerm.toLowerCase());
@@ -66,7 +66,7 @@ const UrunListesi = () => {
       return a[sortBy] < b[sortBy] ? 1 : -1;
     }
   });
-  
+
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -75,7 +75,7 @@ const UrunListesi = () => {
       setSortDir('asc');
     }
   };
-  
+
   const handleBarkodClick = (urunId: string) => {
     setSelectedUrun(urunId);
   };
@@ -184,7 +184,7 @@ const UrunListesi = () => {
       'Secili_Urunler'
     );
   };
-  
+
   const durumlar = ['Depoda', 'Otelde', 'Serviste', 'Kiralandı'];
 
   return (
@@ -211,6 +211,13 @@ const UrunListesi = () => {
             <Package className="h-5 w-5 mr-2" />
             Depo İşlemleri ({selectedProducts.length})
           </button>
+          <Link
+            to="/urunler/ekle"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Yeni Ürün
+          </Link>
         </div>
       </div>
       
