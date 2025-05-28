@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Anasayfa from './pages/Anasayfa';
 import UrunListesi from './pages/UrunListesi';
 import UrunEkle from './pages/UrunEkle';
@@ -12,6 +13,7 @@ import Ayarlar from './pages/Ayarlar';
 import Depo from './pages/Depo';
 import { EnvanterProvider } from './contexts/EnvanterContext';
 import { AuthProvider } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
 import './index.css';
 
 function App() {
@@ -20,7 +22,12 @@ function App() {
       <EnvanterProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<Layout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <PrivateRoute>
+                <Layout />
+              </PrivateRoute>
+            }>
               <Route index element={<Anasayfa />} />
               <Route path="depo" element={<Depo />} />
               <Route path="urunler" element={<UrunListesi />} />
@@ -31,6 +38,7 @@ function App() {
               <Route path="raporlar" element={<Raporlar />} />
               <Route path="ayarlar" element={<Ayarlar />} />
             </Route>
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Router>
       </EnvanterProvider>
