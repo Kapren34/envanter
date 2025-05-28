@@ -84,7 +84,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ad: p.name,
           marka: p.brand || '',
           model: p.model || '',
-          kategori: p.categories?.name || '', // Use category name instead of ID
+          kategori: p.categories?.name || '',
           durum: p.status || 'Depoda',
           lokasyon: p.location_id || '',
           seriNo: p.serial_number || '',
@@ -178,7 +178,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadProducts(); // Reload products to ensure consistency
+      await loadProducts();
     } catch (error) {
       console.error('Product addition error:', error);
       throw error;
@@ -204,7 +204,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadProducts(); // Reload products to ensure consistency
+      await loadProducts();
     } catch (error) {
       console.error('Product update error:', error);
       throw error;
@@ -229,11 +229,9 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (productError) throw productError;
 
-      // Update local state immediately
       setUrunler(prevUrunler => prevUrunler.filter(urun => urun.id !== id));
       setHareketler(prevHareketler => prevHareketler.filter(hareket => hareket.urunId !== id));
 
-      // Reload data to ensure consistency
       await loadData();
     } catch (error) {
       console.error('Product deletion error:', error);
@@ -243,7 +241,24 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addHareket = async (hareket: Hareket) => {
     try {
-      const { data, error } = await supabase
+      // Find the current product
+      const product = urunler.find(u => u.id === hareket.urunId);
+      if (!product) {
+        throw new Error('Ürün bulunamadı');
+      }
+
+      // Calculate new quantity
+      const newQuantity = hareket.tip === 'Giriş' 
+        ? product.miktar + hareket.miktar 
+        : product.miktar - hareket.miktar;
+
+      // Validate quantity for outgoing movements
+      if (hareket.tip === 'Çıkış' && newQuantity < 0) {
+        throw new Error(`Yetersiz stok. Mevcut stok: ${product.miktar}`);
+      }
+
+      // First create the movement record
+      const { data: movementData, error: movementError } = await supabase
         .from('movements')
         .insert([{
           product_id: hareket.urunId,
@@ -255,19 +270,24 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .select()
         .single();
 
-      if (error) throw error;
+      if (movementError) throw movementError;
 
-      // Update product quantity based on movement type
-      const product = urunler.find(u => u.id === hareket.urunId);
-      if (product) {
-        const newQuantity = hareket.tip === 'Giriş' 
-          ? product.miktar + hareket.miktar 
-          : product.miktar - hareket.miktar;
+      // Then update the product quantity
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ quantity: newQuantity })
+        .eq('id', hareket.urunId);
 
-        await updateUrun(hareket.urunId, { miktar: newQuantity });
+      if (updateError) {
+        // If product update fails, rollback the movement
+        await supabase
+          .from('movements')
+          .delete()
+          .eq('id', movementData.id);
+        throw updateError;
       }
 
-      await loadData(); // Reload all data to ensure consistency
+      await loadData();
     } catch (error) {
       console.error('Movement addition error:', error);
       throw error;
@@ -283,7 +303,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadData(); // Reload all data to ensure consistency
+      await loadData();
     } catch (error) {
       console.error('Movement deletion error:', error);
       throw error;
@@ -302,7 +322,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadData(); // Reload all data to ensure consistency
+      await loadData();
     } catch (error) {
       console.error('Category addition error:', error);
       throw error;
@@ -318,7 +338,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadData(); // Reload all data to ensure consistency
+      await loadData();
     } catch (error) {
       console.error('Category deletion error:', error);
       throw error;
