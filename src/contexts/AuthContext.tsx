@@ -13,6 +13,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,26 +21,53 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    // Aktif session kontrolü
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        setUser({
-          id: data.session.user.id,
-          email: data.session.user.email,
-          role: 'user', // istersen role'u DB'den çekebilirsin
-        });
-      }
-    });
+  const refreshSession = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
 
-    // Auth state değişikliklerini dinle (login, logout, expire)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
+        // Fetch user role from the database
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userError) throw userError;
+
         setUser({
           id: session.user.id,
           email: session.user.email,
-          role: 'user', // istersen role'u DB'den çekebilirsin
+          role: userData?.role || 'user',
         });
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      setUser(null);
+    }
+  };
+
+  useEffect(() => {
+    refreshSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!userError && userData) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            role: userData.role,
+          });
+        }
       } else {
         setUser(null);
       }
@@ -56,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let emailToUse = identifier;
 
       if (!isEmail) {
-        // If identifier is not an email, try to find the user by username
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('email, password_hash')
@@ -90,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Giriş başarısız');
       }
 
+      await refreshSession();
     } catch (error) {
       console.error('Login error:', error);
       throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
@@ -98,19 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      // First, clear the local user state to ensure UI updates immediately
       setUser(null);
-
-      // Attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Logout error:', error);
-        // Even if server-side logout fails, we keep the user signed out locally
-      }
+      if (error) throw error;
     } catch (error) {
-      console.error('Unexpected logout error:', error);
-      // Ensure user remains signed out locally even if an unexpected error occurs
+      console.error('Logout error:', error);
     }
   };
 
@@ -120,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         login,
         logout,
+        refreshSession,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
       }}

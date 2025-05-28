@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
 const Ayarlar = () => {
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({
     username: '',
@@ -26,15 +26,34 @@ const Ayarlar = () => {
   useEffect(() => {
     loadUsers();
     if (user) {
-      setUserProfile({
-        username: user.username || '',
-        email: user.email || '',
-        full_name: user.full_name || '',
-        password: '',
-        new_password: ''
-      });
+      loadUserProfile();
     }
   }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('username, email, full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (userError) throw userError;
+
+      if (userData) {
+        setUserProfile({
+          username: userData.username || '',
+          email: userData.email || '',
+          full_name: userData.full_name || '',
+          password: '',
+          new_password: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setError('Profil bilgileri yüklenirken bir hata oluştu');
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -91,6 +110,14 @@ const Ayarlar = () => {
     setError('');
 
     try {
+      // First refresh the session to ensure we have valid credentials
+      await refreshSession();
+
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error('Oturum bulunamadı');
+
       if (userProfile.new_password) {
         const { error: passwordError } = await supabase.auth.updateUser({
           password: userProfile.new_password
@@ -109,7 +136,9 @@ const Ayarlar = () => {
 
       if (profileError) throw profileError;
 
+      await loadUserProfile();
       alert('Profil başarıyla güncellendi');
+      
       if (userProfile.new_password) {
         alert('Şifreniz değiştirildi. Lütfen tekrar giriş yapın.');
         await supabase.auth.signOut();
