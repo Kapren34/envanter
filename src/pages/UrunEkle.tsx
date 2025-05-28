@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Camera } from 'lucide-react';
 import { useEnvanter } from '../contexts/EnvanterContext';
-import { generateBarkod, checkExistingBarkod } from '../utils/barkodUtils';
+import { generateBarkod } from '../utils/barkodUtils';
 import { supabase } from '../lib/supabase';
 import React, { useState, useEffect } from 'react';
 
 const UrunEkle = () => {
   const navigate = useNavigate();
-  const { addUrun } = useEnvanter();
+  const { loadData } = useEnvanter();
 
   // Fetch categories
   const [kategoriler, setKategoriler] = useState([]);
@@ -46,10 +46,10 @@ const UrunEkle = () => {
     model: '',
     kategori: '',
     durum: 'Depoda',
-    lokasyon: '', // default empty to force selection or empty
+    lokasyon: '',
     seriNo: '',
     aciklama: '',
-    miktar: 1, // Added quantity field with default value 1
+    miktar: 1,
   });
 
   const handleChange = (
@@ -80,7 +80,7 @@ const UrunEkle = () => {
           .from('products')
           .insert([
             {
-              barcode,
+              barcode: barcode, // Include the generated barcode
               name: formData.ad,
               brand: formData.marka || null,
               model: formData.model || null,
@@ -91,6 +91,7 @@ const UrunEkle = () => {
               location_id: formData.lokasyon || null,
               photo_url: null,
               created_by: null,
+              quantity: 1, // Each product instance has quantity 1
             },
           ])
           .select();
@@ -101,16 +102,12 @@ const UrunEkle = () => {
         }
       }
 
-      // Add all products to context
-      products.forEach(product => {
-        if (addUrun) {
-          addUrun(product);
-        }
-      });
-
+      // Reload the data in the context to reflect the changes
+      await loadData();
+      
       navigate('/urunler');
     } catch (error) {
-      console.error(error);
+      console.error('Error saving products:', error);
       alert('Kaydetme sırasında bir hata oluştu.');
     } finally {
       setIsSubmitting(false);
