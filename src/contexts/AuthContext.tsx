@@ -97,7 +97,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      // First, clear the local user state to ensure UI updates immediately
+      setUser(null);
+
+      // Attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
+        // Even if server-side logout fails, we keep the user signed out locally
+      }
+    } catch (error) {
+      console.error('Unexpected logout error:', error);
+      // Ensure user remains signed out locally even if an unexpected error occurs
+    }
   };
 
   return (
