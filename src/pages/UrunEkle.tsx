@@ -49,13 +49,17 @@ const UrunEkle = () => {
     lokasyon: '', // default empty to force selection or empty
     seriNo: '',
     aciklama: '',
+    miktar: 1, // Added quantity field with default value 1
   });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'miktar' ? Math.max(1, parseInt(value) || 1) : value,
+    }));
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,40 +69,44 @@ const UrunEkle = () => {
     setIsSubmitting(true);
 
     try {
-      // Check if a product with the same name, brand, and model exists
-      const existingBarkod = await checkExistingBarkod(
-        supabase,
-        formData.ad,
-        formData.marka,
-        formData.model
-      );
+      const products = [];
+      
+      // Generate multiple products based on quantity
+      for (let i = 0; i < formData.miktar; i++) {
+        // Generate a unique barcode for each product
+        const barcode = generateBarkod();
 
-      // Use existing barcode or generate new one
-      const barcode = existingBarkod || generateBarkod();
+        const { data, error } = await supabase
+          .from('products')
+          .insert([
+            {
+              barcode,
+              name: formData.ad,
+              brand: formData.marka || null,
+              model: formData.model || null,
+              category_id: formData.kategori || null,
+              serial_number: formData.seriNo ? `${formData.seriNo}-${i + 1}` : null,
+              description: formData.aciklama || null,
+              status: formData.durum || 'Depoda',
+              location_id: formData.lokasyon || null,
+              photo_url: null,
+              created_by: null,
+            },
+          ])
+          .select();
 
-      const { data, error } = await supabase
-        .from('products')
-        .insert([
-          {
-            barcode,
-            name: formData.ad,
-            brand: formData.marka || null,
-            model: formData.model || null,
-            category_id: formData.kategori || null,
-            serial_number: formData.seriNo || null,
-            description: formData.aciklama || null,
-            status: formData.durum || 'Depoda',
-            location_id: formData.lokasyon || null,
-            photo_url: null,
-            created_by: null,
-          },
-        ]);
-
-      if (error) throw error;
-
-      if (addUrun && data) {
-        addUrun(data[0]);
+        if (error) throw error;
+        if (data) {
+          products.push(data[0]);
+        }
       }
+
+      // Add all products to context
+      products.forEach(product => {
+        if (addUrun) {
+          addUrun(product);
+        }
+      });
 
       navigate('/urunler');
     } catch (error) {
@@ -188,6 +196,21 @@ const UrunEkle = () => {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label htmlFor="miktar" className="block text-sm font-medium text-gray-700 mb-1">
+                Miktar*
+              </label>
+              <input
+                type="number"
+                id="miktar"
+                name="miktar"
+                min="1"
+                value={formData.miktar}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
           </div>
 
           {/* Right Column */}
@@ -243,6 +266,11 @@ const UrunEkle = () => {
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
+              {formData.miktar > 1 && formData.seriNo && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Her ürün için seri numarasına -1, -2, ... eklenir
+                </p>
+              )}
             </div>
 
             <div>
