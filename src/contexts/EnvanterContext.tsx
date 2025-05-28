@@ -74,7 +74,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (productsError) {
         console.error('Products loading error:', productsError);
       } else if (products) {
-        setUrunler(products.map(p => ({
+        const mappedProducts = products.map(p => ({
           id: p.id,
           ad: p.name,
           marka: p.brand,
@@ -87,7 +87,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           barkod: p.barcode,
           miktar: p.quantity || 1,
           eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
-        })));
+        }));
+        setUrunler(mappedProducts);
       }
     } catch (error) {
       console.error('Products loading error:', error);
@@ -129,7 +130,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (movementsError) {
         console.error('Movements loading error:', movementsError);
       } else if (movements) {
-        setHareketler(movements.map(m => ({
+        const mappedMovements = movements.map(m => ({
           id: m.id,
           urunId: m.product_id,
           urunAdi: m.products?.name || '',
@@ -139,7 +140,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           aciklama: m.description,
           lokasyon: m.location_id,
           kullanici: m.user_id
-        })));
+        }));
+        setHareketler(mappedMovements);
       }
     } catch (error) {
       console.error('Data loading error:', error);
@@ -167,7 +169,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadData(); // Reload all data to ensure consistency
+      await loadProducts(); // Reload products to ensure consistency
     } catch (error) {
       console.error('Product addition error:', error);
       throw error;
@@ -193,7 +195,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await loadData(); // Reload all data to ensure consistency
+      await loadProducts(); // Reload products to ensure consistency
     } catch (error) {
       console.error('Product update error:', error);
       throw error;
@@ -218,10 +220,12 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (productError) throw productError;
 
-      // Update local state
+      // Update local state immediately
       setUrunler(prevUrunler => prevUrunler.filter(urun => urun.id !== id));
       setHareketler(prevHareketler => prevHareketler.filter(hareket => hareket.urunId !== id));
 
+      // Reload data to ensure consistency
+      await loadData();
     } catch (error) {
       console.error('Product deletion error:', error);
       throw error;
