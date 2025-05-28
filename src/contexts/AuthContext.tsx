@@ -5,6 +5,7 @@ interface User {
   id: string;
   email: string | null;
   role: 'admin' | 'user';
+  full_name?: string;
 }
 
 interface AuthContextType {
@@ -27,10 +28,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (session?.user) {
-        // Fetch user role from the database
+        // Fetch user data including role and full_name
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('role')
+          .select('role, full_name')
           .eq('id', session.user.id)
           .single();
 
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: session.user.id,
           email: session.user.email,
           role: userData?.role || 'user',
+          full_name: userData?.full_name
         });
       } else {
         setUser(null);
@@ -53,11 +55,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     refreshSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('role')
+          .select('role, full_name')
           .eq('id', session.user.id)
           .single();
 
@@ -66,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: session.user.id,
             email: session.user.email,
             role: userData.role,
+            full_name: userData.full_name
           });
         }
       } else {
@@ -80,29 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string) => {
     try {
-      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-      let emailToUse = identifier;
-
-      if (!isEmail) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('email, password_hash')
-          .eq('username', identifier)
-          .single();
-
-        if (userError || !userData) {
-          throw new Error('Kullanıcı adı bulunamadı');
-        }
-
-        if (!userData.email) {
-          throw new Error('Kullanıcıya ait email bulunamadı');
-        }
-
-        emailToUse = userData.email;
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
+        email: identifier,
         password: password
       });
 
@@ -126,9 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      setUser(null);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
