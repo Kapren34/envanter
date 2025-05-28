@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Save, User } from 'lucide-react';
 
-const Panel = () => {
+const Ayarlar = () => {
   const { user, logout } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [userProfile, setUserProfile] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState({
+    fullName: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -17,208 +22,195 @@ const Panel = () => {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('name, email, role')
+          .select('full_name, email')
           .eq('id', user.id)
           .single();
 
         if (error) throw error;
 
-        setUserProfile({
-          name: data.name || '',
-          email: data.email || '',
-          password: '',
-          confirmPassword: ''
-        });
-
-        setIsAdmin(data.role === 'admin');
-
-        if (data.role === 'admin') fetchUsers();
+        setUserProfile(prev => ({
+          ...prev,
+          fullName: data.full_name || '',
+          email: data.email || ''
+        }));
       } catch (error) {
-        setError(error.message);
+        console.error('Error fetching profile:', error);
+        setError('Profil bilgileri yüklenirken bir hata oluştu');
       }
     };
 
     fetchProfile();
   }, [user]);
 
-  const fetchUsers = async () => {
-    const { data, error } = await supabase.from('users').select('*');
-    if (error) {
-      alert('Error fetching users');
-    } else {
-      setUsers(data);
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserProfile(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError(null);
+    setSuccessMessage(null);
   };
 
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    if (!newUser.email || !newUser.password || !newUser.role) {
-      setError('All fields are required');
-      return;
-    }
-    setLoading(true);
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: newUser.email,
-      password: newUser.password
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { data: createdUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', newUser.email)
-      .single();
-
-    if (createdUser) {
-      await supabase.from('users').upsert({
-        id: createdUser.id,
-        email: newUser.email,
-        role: newUser.role
-      });
-    }
-
-    alert('User created successfully');
-    setNewUser({ email: '', password: '', role: '' });
-    fetchUsers();
-    setLoading(false);
-  };
-
-  const handleProfileUpdate = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
-    if (userProfile.password && userProfile.password !== userProfile.confirmPassword) {
-      setError("Passwords don't match");
-      setLoading(false);
-      return;
-    }
+    try {
+      // Update profile information
+      const updates = {
+        id: user?.id,
+        full_name: userProfile.fullName,
+        updated_at: new Date()
+      };
 
-    const updates = {
-      id: user.id,
-      name: userProfile.name,
-      email: userProfile.email
-    };
+      const { error: updateError } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user?.id);
 
-    const { error: updateError } = await supabase.from('users').upsert(updates);
-    if (updateError) {
-      setError(updateError.message);
-      setLoading(false);
-      return;
-    }
+      if (updateError) throw updateError;
 
-    if (userProfile.password) {
-      const { error: passError } = await supabase.auth.updateUser({
-        password: userProfile.password
-      });
-      if (passError) {
-        setError(passError.message);
-        setLoading(false);
-        return;
+      // Update password if provided
+      if (userProfile.newPassword) {
+        if (userProfile.newPassword !== userProfile.confirmPassword) {
+          throw new Error('Yeni şifreler eşleşmiyor');
+        }
+
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: userProfile.newPassword
+        });
+
+        if (passwordError) throw passwordError;
+
+        // Clear password fields
+        setUserProfile(prev => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        }));
       }
-      alert('Password updated');
-    }
 
-    alert('Profile updated successfully');
-    setUserProfile((prev) => ({ ...prev, password: '', confirmPassword: '' }));
-    setLoading(false);
+      setSuccessMessage('Profil başarıyla güncellendi');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError(error instanceof Error ? error.message : 'Profil güncellenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div>
-      <h1>Panel</h1>
-      <p>Welcome, {user?.email}</p>
-      <button onClick={logout}>Logout</button>
+    <div className="max-w-2xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center mb-6">
+          <div className="h-12 w-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <User className="h-6 w-6 text-indigo-600" />
+          </div>
+          <div className="ml-4">
+            <h1 className="text-2xl font-bold text-gray-800">Profil Ayarları</h1>
+            <p className="text-gray-600">Hesap bilgilerinizi güncelleyin</p>
+          </div>
+        </div>
 
-      <h2>Update Profile</h2>
-      <form onSubmit={handleProfileUpdate}>
-        <input
-          type="text"
-          placeholder="Name"
-          value={userProfile.name}
-          onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={userProfile.email}
-          onChange={(e) => setUserProfile({ ...userProfile, email: e.target.value })}
-          required
-        />
-        <input
-          type="password"
-          placeholder="New Password"
-          value={userProfile.password}
-          onChange={(e) => setUserProfile({ ...userProfile, password: e.target.value })}
-        />
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          value={userProfile.confirmPassword}
-          onChange={(e) => setUserProfile({ ...userProfile, confirmPassword: e.target.value })}
-        />
-        <button type="submit" disabled={loading}>{loading ? 'Updating...' : 'Update Profile'}</button>
-      </form>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Ad Soyad
+            </label>
+            <input
+              type="text"
+              name="fullName"
+              value={userProfile.fullName}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
 
-      {isAdmin && (
-        <>
-          <h2>Create User</h2>
-          <form onSubmit={handleCreateUser}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
             <input
               type="email"
-              placeholder="Email"
-              value={newUser.email}
-              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-              required
+              value={userProfile.email}
+              disabled
+              className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-500"
             />
-            <input
-              type="password"
-              placeholder="Password"
-              value={newUser.password}
-              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-              required
-            />
-            <select
-              value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-              required
+            <p className="mt-1 text-sm text-gray-500">
+              Email adresi değiştirilemez
+            </p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <h2 className="text-lg font-medium text-gray-800 mb-4">
+              Şifre Değiştir
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Yeni Şifre
+                </label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={userProfile.newPassword}
+                  onChange={handleChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Yeni Şifre (Tekrar)
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={userProfile.confirmPassword}
+                  onChange={handleChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              {successMessage}
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={logout}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
-              <option value="">Select role</option>
-              <option value="admin">Admin</option>
-              <option value="user">User</option>
-            </select>
-            <button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create User'}</button>
-          </form>
-
-          <h2>All Users</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.email}</td>
-                  <td>{user.role}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+              Çıkış Yap
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <Save className="h-5 w-5 mr-2" />
+              {loading ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
 
-export default Panel;
+export default Ayarlar;
