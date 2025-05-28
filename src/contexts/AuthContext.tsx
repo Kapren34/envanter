@@ -27,9 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, full_name, username')
+        .select('id, email, role, full_name, username')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (userError) {
         console.error('Error fetching user data:', userError);
@@ -57,8 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (userData) {
           setUser({
-            id: session.user.id,
-            email: session.user.email,
+            id: userData.id,
+            email: userData.email,
             role: userData.role || 'user',
             full_name: userData.full_name,
             username: userData.username
@@ -84,8 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (userData) {
           setUser({
-            id: session.user.id,
-            email: session.user.email,
+            id: userData.id,
+            email: userData.email,
             role: userData.role,
             full_name: userData.full_name,
             username: userData.username
@@ -105,14 +105,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string) => {
     try {
-      // First, try to sign in
+      // First, try to sign in with email
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: identifier,
         password: password
       });
 
       if (signInError) {
-        if (signInError.message === 'Invalid login credentials') {
+        if (signInError.message.includes('Invalid login credentials')) {
           throw new Error('Geçersiz kullanıcı adı veya şifre');
         }
         throw signInError;
@@ -130,8 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setUser({
-        id: data.user.id,
-        email: data.user.email,
+        id: userData.id,
+        email: userData.email,
         role: userData.role,
         full_name: userData.full_name,
         username: userData.username
