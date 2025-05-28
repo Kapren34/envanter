@@ -28,14 +28,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('auth_users')
         .select('id, username, role, password_hash')
         .eq('username', username)
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
+        .maybeSingle();
 
       if (userError) {
-        throw new Error('Veritabanı hatası oluştu');
+        throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
       if (!userData) {
-        throw new Error('Kullanıcı adı bulunamadı');
+        throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
       // Verify password only if we found a user
@@ -45,12 +45,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hash: userData.password_hash
         });
 
-      if (verifyError) {
-        throw new Error('Doğrulama hatası oluştu');
-      }
-
-      if (!verifyData) {
-        throw new Error('Şifre hatalı');
+      if (verifyError || !verifyData) {
+        throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
       setUser({
@@ -61,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Login error:', error);
-      throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
+      throw new Error('Kullanıcı adı veya şifre hatalı');
     }
   };
 
