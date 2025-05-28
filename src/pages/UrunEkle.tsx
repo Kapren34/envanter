@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 
 const UrunEkle = () => {
   const navigate = useNavigate();
-  const { loadProducts } = useEnvanter(); // Updated to use the correct function name from context
+  const { loadProducts } = useEnvanter();
 
   // Fetch categories
   const [kategoriler, setKategoriler] = useState([]);
@@ -103,7 +103,7 @@ const UrunEkle = () => {
       }
 
       // Reload the data in the context to reflect the changes
-      await loadProducts(); // Updated to use the correct function name
+      await loadProducts();
       
       navigate('/urunler');
     } catch (error) {

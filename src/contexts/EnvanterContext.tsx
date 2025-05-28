@@ -45,6 +45,7 @@ interface EnvanterContextType {
   addKategori: (kategori: Kategori) => Promise<void>;
   removeKategori: (id: string) => Promise<void>;
   isAdmin: boolean;
+  loadProducts: () => Promise<void>;
 }
 
 const EnvanterContext = createContext<EnvanterContextType | undefined>(undefined);
@@ -59,25 +60,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadProducts = async () => {
     try {
-      // Load categories
-      const { data: categories, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (categoriesError) {
-        console.error('Categories loading error:', categoriesError);
-      } else if (categories) {
-        const mappedCategories = categories.map(c => ({
-          id: c.id,
-          ad: c.name
-        }));
-        setKategoriler(mappedCategories);
-      }
-
-      // Load products
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -105,6 +89,32 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
         })));
       }
+    } catch (error) {
+      console.error('Products loading error:', error);
+      throw error;
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      // Load categories
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (categoriesError) {
+        console.error('Categories loading error:', categoriesError);
+      } else if (categories) {
+        const mappedCategories = categories.map(c => ({
+          id: c.id,
+          ad: c.name
+        }));
+        setKategoriler(mappedCategories);
+      }
+
+      // Load products
+      await loadProducts();
 
       // Load movements
       const { data: movements, error: movementsError } = await supabase
@@ -301,7 +311,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     removeHareket,
     addKategori,
     removeKategori,
-    isAdmin
+    isAdmin,
+    loadProducts
   };
 
   return (
