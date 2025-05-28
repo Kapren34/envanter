@@ -202,14 +202,26 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeUrun = async (id: string) => {
     try {
-      const { error } = await supabase
+      // First, delete all related movements
+      const { error: movementsError } = await supabase
+        .from('movements')
+        .delete()
+        .eq('product_id', id);
+
+      if (movementsError) throw movementsError;
+
+      // Then delete the product
+      const { error: productError } = await supabase
         .from('products')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (productError) throw productError;
 
-      await loadData(); // Reload all data to ensure consistency
+      // Update local state
+      setUrunler(prevUrunler => prevUrunler.filter(urun => urun.id !== id));
+      setHareketler(prevHareketler => prevHareketler.filter(hareket => hareket.urunId !== id));
+
     } catch (error) {
       console.error('Product deletion error:', error);
       throw error;
