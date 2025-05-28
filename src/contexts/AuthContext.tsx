@@ -23,16 +23,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
+      // First, try to find the user by username
       const { data: userData, error: userError } = await supabase
         .from('auth_users')
         .select('id, username, role, password_hash')
         .eq('username', username)
-        .single();
+        .maybeSingle();
 
       if (userError || !userData) {
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
+      // Verify the password using the database function
       const { data: isValid, error: verifyError } = await supabase
         .rpc('verify_password', {
           password: password,
