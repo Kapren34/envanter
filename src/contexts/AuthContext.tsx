@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('auth_users')
         .select('id, username, role, password_hash')
         .eq('username', username)
-        .single();
+        .maybeSingle();
 
       if (userError || !userData) {
         throw new Error('Kullanıcı adı veya şifre hatalı');
