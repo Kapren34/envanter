@@ -84,7 +84,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ad: p.name,
           marka: p.brand || '',
           model: p.model || '',
-          kategori: p.category_id || '',
+          kategori: p.categories?.name || '', // Use category name instead of ID
           durum: p.status || 'Depoda',
           lokasyon: p.location_id || '',
           seriNo: p.serial_number || '',
