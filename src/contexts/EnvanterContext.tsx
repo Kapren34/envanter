@@ -12,6 +12,7 @@ interface Urun {
   seriNo: string;
   aciklama: string;
   barkod: string;
+  miktar: number;
   eklemeTarihi: string;
 }
 
@@ -100,6 +101,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           seriNo: p.serial_number,
           aciklama: p.description,
           barkod: p.barcode,
+          miktar: p.quantity || 1,
           eklemeTarihi: new Date(p.created_at).toLocaleDateString('tr-TR')
         })));
       }
@@ -147,7 +149,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           location_id: urun.lokasyon,
           serial_number: urun.seriNo,
           description: urun.aciklama,
-          barcode: urun.barkod
+          barcode: urun.barkod,
+          quantity: urun.miktar
         }])
         .select()
         .single();
@@ -173,7 +176,8 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           status: updatedUrun.durum,
           location_id: updatedUrun.lokasyon,
           serial_number: updatedUrun.seriNo,
-          description: updatedUrun.aciklama
+          description: updatedUrun.aciklama,
+          quantity: updatedUrun.miktar
         })
         .eq('id', id);
 
@@ -217,6 +221,16 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .single();
 
       if (error) throw error;
+
+      // Update product quantity based on movement type
+      const product = urunler.find(u => u.id === hareket.urunId);
+      if (product) {
+        const newQuantity = hareket.tip === 'Giriş' 
+          ? product.miktar + hareket.miktar 
+          : product.miktar - hareket.miktar;
+
+        await updateUrun(hareket.urunId, { miktar: newQuantity });
+      }
 
       await loadData(); // Reload all data to ensure consistency
     } catch (error) {
