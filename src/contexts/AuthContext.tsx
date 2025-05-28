@@ -23,25 +23,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     try {
+      // First check if the user exists
       const { data: userData, error: userError } = await supabase
         .from('auth_users')
         .select('id, username, role, password_hash')
         .eq('username', username)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
 
-      if (userError || !userData) {
-        throw new Error('Kullanıcı adı veya şifre hatalı');
+      if (userError) {
+        throw new Error('Veritabanı hatası oluştu');
       }
 
-      // Verify password
+      if (!userData) {
+        throw new Error('Kullanıcı adı bulunamadı');
+      }
+
+      // Verify password only if we found a user
       const { data: verifyData, error: verifyError } = await supabase
         .rpc('verify_password', {
           password: password,
           hash: userData.password_hash
         });
 
-      if (verifyError || !verifyData) {
-        throw new Error('Kullanıcı adı veya şifre hatalı');
+      if (verifyError) {
+        throw new Error('Doğrulama hatası oluştu');
+      }
+
+      if (!verifyData) {
+        throw new Error('Şifre hatalı');
       }
 
       setUser({
