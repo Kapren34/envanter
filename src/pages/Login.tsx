@@ -17,7 +17,7 @@ const Login = () => {
     const testConnection = async () => {
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from('auth_users')
           .select('count')
           .single();
 
