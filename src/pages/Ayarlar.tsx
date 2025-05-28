@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/initSupabase';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 const Panel = () => {
