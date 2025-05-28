@@ -14,7 +14,7 @@ const Hareketler = () => {
   const [sortBy, setSortBy] = useState('tarih');
   const [sortDir, setSortDir] = useState('desc');
   const [locations, setLocations] = useState<{id: string, name: string}[]>([]);
-  const [users, setUsers] = useState<{id: string, username: string, full_name: string}[]>([]);
+  const [users, setUsers] = useState<{id: string, username: string}[]>([]);
   
   // Fetch locations and users from Supabase
   useEffect(() => {
@@ -31,10 +31,10 @@ const Hareketler = () => {
         setLocations(locationsData);
       }
 
-      // Fetch users
+      // Fetch users from auth_users table instead of users
       const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, username, full_name')
+        .from('auth_users')
+        .select('id, username')
         .order('username');
       
       if (usersError) {
@@ -55,7 +55,7 @@ const Hareketler = () => {
 
   const getUserName = (userId: string) => {
     const user = users.find(u => u.id === userId);
-    return user ? user.full_name : 'Unknown';
+    return user ? user.username : 'Unknown';
   };
   
   // Filtreleme
