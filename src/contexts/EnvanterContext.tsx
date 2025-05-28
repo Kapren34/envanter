@@ -67,9 +67,11 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .select(`
           *,
           categories (
+            id,
             name
           ),
           locations (
+            id,
             name
           )
         `);
@@ -129,6 +131,7 @@ export const EnvanterProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             name
           ),
           locations (
+            id,
             name
           )
         `);
