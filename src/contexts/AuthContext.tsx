@@ -31,7 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (userError) {
-        console.error('User lookup error:', userError);
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
@@ -46,12 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hash: userData.password_hash
         });
 
-      if (verifyError) {
-        console.error('Password verification error:', verifyError);
-        throw new Error('Kullanıcı adı veya şifre hatalı');
-      }
-
-      if (!isValid) {
+      if (verifyError || !isValid) {
         throw new Error('Kullanıcı adı veya şifre hatalı');
       }
 
