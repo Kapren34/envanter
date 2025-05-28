@@ -30,6 +30,9 @@ const Login = () => {
     }
   };
 
+  // Buton aktiflik kontrolü
+  const isButtonDisabled = !username.trim() || !password.trim() || isLoading;
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -60,6 +63,7 @@ const Login = () => {
                     id="username"
                     name="username"
                     type="text"
+                    autoComplete="username"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -81,6 +85,7 @@ const Login = () => {
                     id="password"
                     name="password"
                     type="password"
+                    autoComplete="current-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -99,8 +104,12 @@ const Login = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading || !username || !password}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isButtonDisabled}
+                  className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
+                    isButtonDisabled 
+                      ? 'bg-indigo-400 cursor-not-allowed' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
                 >
                   {isLoading ? (
                     <div className="flex items-center">
