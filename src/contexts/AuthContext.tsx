@@ -6,6 +6,7 @@ interface User {
   email: string | null;
   role: 'admin' | 'user';
   full_name?: string;
+  username?: string;
 }
 
 interface AuthContextType {
@@ -22,27 +23,49 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  const fetchUserData = async (userId: string) => {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, full_name, username')
+        .eq('id', userId)
+        .single();
+
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+        return null;
+      }
+
+      return userData;
+    } catch (error) {
+      console.error('Error in fetchUserData:', error);
+      return null;
+    }
+  };
+
   const refreshSession = async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) throw error;
+      if (error) {
+        console.error('Session error:', error);
+        setUser(null);
+        return;
+      }
 
       if (session?.user) {
-        // Fetch user data including role and full_name
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role, full_name')
-          .eq('id', session.user.id)
-          .single();
-
-        if (userError) throw userError;
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          role: userData?.role || 'user',
-          full_name: userData?.full_name
-        });
+        const userData = await fetchUserData(session.user.id);
+        
+        if (userData) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            role: userData.role || 'user',
+            full_name: userData.full_name,
+            username: userData.username
+          });
+        } else {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
@@ -57,19 +80,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role, full_name')
-          .eq('id', session.user.id)
-          .single();
-
-        if (!userError && userData) {
+        const userData = await fetchUserData(session.user.id);
+        
+        if (userData) {
           setUser({
             id: session.user.id,
             email: session.user.email,
             role: userData.role,
-            full_name: userData.full_name
+            full_name: userData.full_name,
+            username: userData.username
           });
+        } else {
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -83,23 +105,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // First, try to sign in
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: identifier,
         password: password
       });
 
-      if (error) {
-        if (error.message === 'Invalid login credentials') {
+      if (signInError) {
+        if (signInError.message === 'Invalid login credentials') {
           throw new Error('Geçersiz kullanıcı adı veya şifre');
         }
-        throw error;
+        throw signInError;
       }
 
       if (!data.user) {
         throw new Error('Giriş başarısız');
       }
 
-      await refreshSession();
+      // After successful sign in, fetch the user data
+      const userData = await fetchUserData(data.user.id);
+      
+      if (!userData) {
+        throw new Error('Kullanıcı bilgileri alınamadı');
+      }
+
+      setUser({
+        id: data.user.id,
+        email: data.user.email,
+        role: userData.role,
+        full_name: userData.full_name,
+        username: userData.username
+      });
+
     } catch (error) {
       console.error('Login error:', error);
       throw error instanceof Error ? error : new Error('Giriş işlemi başarısız oldu');
@@ -113,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
+      throw error;
     }
   };
 
