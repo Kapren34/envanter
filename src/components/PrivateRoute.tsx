@@ -1,24 +1,23 @@
 import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const autoLogin = async () => {
-      if (!isAuthenticated) {
-        try {
-          await login('admin@powersound.com', 'Admin123');
-        } catch (error) {
-          console.error('Auto-login failed:', error);
-        }
-      }
-    };
+    if (!isAuthenticated) {
+      // Redirect to login page while preserving the intended destination
+      navigate('/login', { 
+        replace: true,
+        state: { from: location.pathname }
+      });
+    }
+  }, [isAuthenticated, navigate, location]);
 
-    autoLogin();
-  }, [isAuthenticated, login]);
-
-  // Show loading state while attempting auto-login
+  // Show loading state briefly while checking authentication
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
